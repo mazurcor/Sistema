@@ -315,21 +315,21 @@
 	que usa la funcion hash SHA-512.
 
 	Según el RFC-8017 la encriptación RSAES-OAEP-ENCRYPT limita la longitud del mensaje a encriptar.
-    Tomando las definiciones:
-        M           message to be encrypted, an octet string
-        mLen        length in octets of a message M
-        K           RSA private key
-        k           length in octets of the RSA modulus n  
-        Hash        hash function
-        hLen        length in octets of the hash function output
-    se debe cumplir que:
-        mLen <= k - 2·hLen - 2 
-    En este caso:  
-        Hash = SHA-512,  
-        hLen = 512 / 8 = 64,  
-        k = 2048 / 8 = 256, 
-    luego:
-        mLen <= 256 - 2·64 - 2 = 126 bytes
+	Tomando las definiciones:
+		M           message to be encrypted, an octet string
+		mLen        length in octets of a message M
+		K           RSA private key
+		k           length in octets of the RSA modulus n  
+		Hash        hash function
+		hLen        length in octets of the hash function output
+	se debe cumplir que:
+	mLen <= k - 2·hLen - 2 
+	En este caso:  
+		Hash = SHA-512,  
+		hLen = 512 / 8 = 64,  
+		k = 2048 / 8 = 256, 
+	luego:
+		mLen <= 256 - 2·64 - 2 = 126 bytes
 	si se supera esta longitud, se produce un error.
         
 
