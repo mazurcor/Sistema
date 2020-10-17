@@ -1,0 +1,44 @@
+﻿
+
+    Formato Multibyte (Endianness)
+    -------------------------------
+
+    Indica la forma en la que se almacenan los datos de varios bytes en la memoria de in ordenador. 
+    Hay dos formatos: 'big-endian' y 'little-endian'.
+
+    La manera natural de escribir (en un papel) números de varios bytes (en hexadecimal) es escribir 
+    a la izquierda los bytes más significativos. En '0A0B0C0Dh', '0Ah' es el byte mas significativo 
+    y '0Dh' el menos significativo.
+
+    En cuanto a la memoria, la manera natural de representar la memoria (en un papel) es escribir 
+    primero los bytes con dirección mas baja:
+
+        +--+--+--+--+--+--+--+--+--+--+--+
+        |  |  |  |  |  |  |  |  |  |  |  | · · · · ·
+        +--+--+--+--+--+--+--+--+--+--+--+
+          0  1  2  3  4  5  6  7  8  9 10  · · · · ·
+
+    Con estos supuestos, el formato 'big-endian' es la disposición directa de los bytes del número 
+    (El número está situado en la posición de memoria 2):
+
+                |
+                v
+        +--+--+--+--+--+--+--+--+--+--+--+
+        |  |  |0A|0B|0C|0D|  |  |  |  |  | · · · · ·
+        +--+--+--+--+--+--+--+--+--+--+--+
+          0  1  2  3  4  5  6  7  8  9 10  · · · · ·                        
+
+    El formato 'little-endian' es la disposición inversa de los bytes del número:
+
+                |
+                v
+        +--+--+--+--+--+--+--+--+--+--+--+
+        |  |  |0D|0C|0B|0A|  |  |  |  |  | · · · · ·
+        +--+--+--+--+--+--+--+--+--+--+--+
+          0  1  2  3  4  5  6  7  8  9 10  · · · · ·
+            
+
+    Los procesadores de Intel usan el formato 'little-endian'. El formato 'big-endian' es el usado 
+    en los protocolos de TCP/IP. Las clases de 'com.mazc.Sistema' usan el formato 'big-endian'.
+
+

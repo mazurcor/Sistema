@@ -1,0 +1,337 @@
+﻿
+
+	Critografía
+	===========
+
+
+	Encriptación de clave simetrica
+	-------------------------------
+
+	Usada para conseguir la confidencialidad en las comunicaciones y en el almacenamiento de la 
+	información.
+
+	La encriptación o cifrado se denota:  
+		c := E(Ke,m)	
+		donde: 
+			m es el mensaje a enviar (o almacenar)
+			c es el mensaje 'm' cifrado
+			E es un procedimiento de encriptación
+			Ke es la clave de encriptación.
+		
+	El descifrado es:
+		m := D(Ke,c)
+		donde: 
+			D es el procedimiento de desencriptación.
+
+	'E' y 'D' son procedimientos que se coresponden, es decir, se implementan mediante el mismo 
+	algoritmo. Los algoritmos son conocido públicamente.
+	
+	Si se usa la misma clave al cifrar y al descifrar, se obtiene el mensaje original 'm'. Si 
+	no se usa la misma clave, el resultado no es el mensaje 'm'. El número de claves de encriptación 
+	es, en la practica, ilimitado. 
+
+	Para que la comunicación sea confidencial, Alice cifra el mensaje 'm' usando la clave 'Ke' y 
+	envía a Bob el mensaje cifrado 'c'. Al recibir el mensaje, Bob descifra 'c' usando la clave	'Ke'.
+	Eve puede interceptar el mensaje 'c', pero no puede obtener el mensaje original 'm'.
+
+	Para que la comunicación sea confidencial, la clave 'Ke' solo debe ser conocida por Alice y Bob.  
+	Y debe ser deconocida para Eve (y demás). El problema consiste en conseguir que Alice y Bob uses 
+	la misma clave sin que Eve sepa cual es.
+
+
+	Encriptación de claves asimetricas
+	----------------------------------
+
+	Usada para conseguir la confidencialidad en las comunicaciones. Se usa en casos especiales. En 
+	particular, se usa para la establecer las claves usadas en la encriptación simétrica.
+
+	El cifrado se denota:
+		c := E(Pb,m)
+		donde 
+			m es el mensaje a enviar
+			c es el mensaje 'm' cifrado
+			E es un procedimiento de encriptación
+			Pb es la clave de encriptación.
+
+	El descifrado es:
+		m := D(Sb,c)
+		donde: 
+			D es el procedimiento de desencriptación
+			Sb es la clave de desencriptación.
+
+	'E' y 'D' son procedimientos que se coresponden, es decir, se implementan mediante el mismo 
+	algoritmo. Los algoritmos son conocido públicamente.
+
+	'Pb' y 'Sb' son dos claves están relacionadas matemáticamente y se generan conjuntamente. Tienen 
+	denominaciones especiales:
+		- Pb se denomina clave pública
+		- Sb se denomina clave privada (secret key).
+
+	Si se usa la clave pública 'Pb' al cifrar y la clave privada 'Sb' al descifrar, se obtiene el 
+	mensaje original 'm'. Lo mismo ocurre si se intercambian las claves. Pero, si se usa la misma 
+	clave al cifrar y al descifrar, no se obtiene el mensaje 'm'.
+
+	Para que se puedan usar con seguridad, la clave privada solo puede ser conocida por uno de los 
+	participantes en la comunicación, mientras que la clave pública puede ser conocida por cualquier 
+	participante. De esta forma, se considera que el par de claves es 'poseido' por el participante 
+	que genera las clave y guarda la clave privada.
+
+	Para que la comunicación sea confidencial, se usan las claves de Bob. En primer lugar, Alice 
+	obtiene la clave pública, 'Pb' de Bob. Alice cifra 'm' con 'Pb' y envia el resultado, 'c', a 
+	Bob. Entonces Bob descifra 'c' usando su clave privada, 'Sb', para obtener 'm'. Eve puede 
+	interceptar el mensaje 'a' y puede obtener la clave pública de Bob, pero no puede obtener el 
+	mensaje original 'm'. La confidencialidad de la comunicación en sentido inverso, de Bob a Alice, 
+	si se usan las claves de Bob, no obtiene. 
+
+	El problema que tiene esta forma de comunicación es como asegurar que la clave de obtenida de 
+	Bob es realmete suya y no ha sido cambiada por la de Eve.  
+
+
+	Cálculo de huellas o resumenes (hash)
+	-------------------------------------
+
+	Usado principalmente para garantizar la integridad de un mensaje, tienen muchos usos en 
+	criptografia. Se usa el término 'función hash' para referirse al método de cálculo.
+
+	Una funcion hash se denota:
+		a := h(m)
+		donde:
+			h  es la función de cálculo
+			m  es un mensaje de longitud arbitraria
+			a  es el valor calculado, de longitud fija
+
+	'h' se implemeta mediante un algoritmo determinado. Los algoritmos son conocidos públicamente.
+
+	La longitud del valor calculado depende del algoritmo, puede ser de 128 a 1024 bits. 
+
+	Las caracteristicas de las funciones hash son:
+		* dado un valor calculado 'a', no es posible encontrar un valor origen 'm', con  h(m) = a  
+		* no es posible encontrar dos mesajes 'm1' y 'm2' tales que:  h(m) = h(m1)
+	Se entiende que 'no es posible' significa que no es posible en la práctica.
+
+	Las funciones hash se usan para asegurar la integridad de los mensajes. Alice calcula el valor 
+	hash 'a' de un mensaje 'm'. A continuación envia 'm' y 'a'. Cuando Bob los recibe, calcula de 
+	nuevo el valor de h(m). Si coincide con 'a', Bob sabe que 'm' no se ha modificado.
+
+	Para asegurar la integridad del mensaje 'm' es necesario asegurar que el valor 'a' no ha sido
+	modificado. Esto requiere otras técnicas criptográficas. 
+
+
+	SHA-256 (Secure Hash Algorithm)
+	-------------------------------
+
+	SHA-2 es una familia de funciones hash que incluye variantes según el tamaño en bits de los 
+	valores calculados. SHA-256 es la función que produce valores de 256 bits.
+
+
+	Codigos de autenticación de mensajes (MAC)
+	------------------------------------------
+
+	Cálculo usado para garantizar la integridad y la autenticación de la información.
+
+	El calculo de un MAC se denota:
+		a := h(Ka,m)
+		donde:
+			m es el mensaje a autenticar
+			a es el código de autenticación
+			h es la función de cálculo
+			Ka el la clave de autenticacón
+
+	'h' se implemeta mediante un algoritmo determinado. Usualmente los algoritmos son adaptaciones 
+	de los de cálculo de funciones hash. Los algoritmos son conocidos públicamente.
+
+	Las caracteristicas de la relación entre el código 'a' y el mensaje 'm' son las mismas que 
+	aparecen en el cálculo de funciones hash.
+
+	Las claves de autenticación son similares a las de encriptación. Su número es, en la páctica,
+	ilimitado. Si se usa una clave de autenticación distinta, el código obtenido para el mensaje 'm'
+	no es 'a'.
+
+	Para garantizar la integridad y la autenticación en la comunicación, Alice envia el mensaje 'm'  
+	a Bob junto con el código MAC 'a' que obtenido usando la clave 'Ka'. Al recibirlos, Bob calcula 
+	de nuevo el código MAC con la clave 'Ka' y lo compara con 'a'. Si coinciden, Bob sabe que:
+		el mensaje recibido es igual a 'm' (integridad)
+		el mensaje fué enviado por Alice (autenticación)
+
+	Eve puede cambiar 'm', puede cambiar 'a' o puede cambiar ambos. En cualquier caso, al calcular 
+	de nuevo, Bob no obtendrá un codigo MAC coincidente.
+
+	Para garantizar la integridad y la autenticación en la comunicación, la clave 'Ke' solo debe ser
+	conocida por Alice y Bob.  Y debe ser deconocida para Eve (y demás). Por tanto, tiene el mismo 
+	problema que la encriptación de clave simetrica.
+
+
+	HMAC (hash-based message authentication code)
+	---------------------------------------------
+
+	HMAC es un tipo de cálculo MAC basado en funciones hash. Se denominan según la funcion hash en 
+	la que se basan. HMAC-256 se basa en SHA-256.
+
+
+	AES (Advanced Encryption Standard)	
+	----------------------------------
+
+	AES es un algoritmo	de cifrado por bloques de clave simetrica. El cifrado por bloques opera 
+	(cifra y descifra) es bloques de datos de longitud fija y predeterminada.
+
+	Caracteristicas:
+		Tamaño de bloque: 128 bits (16 bytes), se denota 'b'
+		Posibles tamaños de clave: 128, 192, 256 bits (16, 24, 32 bytes).
+
+	Para operar sobre una secuencia de datos formada por varios bloques, se usa un modo de 
+	operación:
+		Electronic codebook (ECB)
+		Cipher block chaining (CBC)
+		Propagating cipher block chaining (PCBC)
+		Cipher feedback (CFB)
+		Output feedback (OFB)
+		Counter (CTR)
+		Galois/Counter (GCM)
+
+	El mensaje a encriptar y el mensaje encriptado se representa como una secuencia de cadenas de 
+	bits:
+		m = P1|P2|···|Pn
+		c = C1|C2|···|Cn
+		donde:
+			m es el mensaje a encriptar
+			c es el mensaje cifrado
+			'|' es la concatenación de cadenas de bits
+			n >= 1 es el número de cadenas de bits
+	La longitud de cada cadena de bits es el tamaño del bloque, 'b', aunque varia según el modo de 
+	operación.
+	
+
+	ECB (electronic codebook)
+	-------------------------
+	
+	ECB es un modo de operación para los cifrados por bloques. ECB simplemente cifra cada bloque.
+
+	La longitud de los bloques del mensaje debe ser igual a 'b' (longitud del bloque del algoritmo). 
+	La longitud del mensaje debe ser múltiplo de 'b'.
+
+	ECB se define por:
+		Ci := E(K,Pi)
+		donde:
+			i = 1,···,n  
+			n es el número de bloques
+			Pi es el bloque a cifrar
+			Ci es el bloque cifrado
+
+	ECB es inseguro y no debe ser usado.
+
+
+	CBC (cipher block chaining)
+	---------------------------
+	
+	CBC es un modo de operación para los cifrados por bloques. CBC cifra cada bloque despues de 
+	combinarlo con el anterior bloque cifrado.
+
+	La longitud de los bloques del mensaje a cifrar y del mensaje cifrado debe ser igual a 'b' 
+	(longitud del bloque del algoritmo). La longitud de los mensajes debe ser múltiplo de 'b'.
+
+	CBC se define por:
+		C1 := E(K,P1⊕IV)
+		Ci := E(K,Pi⊕Ci-1)
+		donde:
+			i = 2,···,n  
+			n es el número de bloques
+			'⊕' es la operacion 'xor'
+			Pi es el bloque a cifrar
+			Ci es el bloque cifrado
+			IV es el vector de inicio
+	Para descifrar:
+		P1 := D(K,C1)xIV
+		Pi := D(K,Ci)xCi-1
+
+	IV es un bloque que se usa para encriptar y desencriptar el primer bloque. No es necesario que 
+	IV sea secreto, pero debe ser impredecible para cada mensaje (no necesariamente distinto).
+
+	Para operar sobre una secuencia de datos que no esta formada por un número completo de bloques, 
+	se usa un sistema para completar el ultimo bloque (padding).
+
+
+	Counter (CTR)
+	-------------
+
+	CTR es un modo de operación para los cifrados por bloques. CTR establece (con un criterio
+	determinado) una secuencia de bloques llamados contadores; cifra cada uno de ellos y los combina 
+	(usando xor) con los bloques del mensaje. 
+
+	La longitud de cada bloque del mensaje a cifrar y del mensaje cifrado debe ser igual a 'b'
+	(longitud del bloque del algoritmo), excepto el último bloque que estará entre 1 y 'b'. Se 
+	cumple que:
+		#m = #c = (n-1)·b+u
+		donde:
+			P1|P2|···|Pn = m  son los bloques del mensaje
+			#m  es la longitud del mensaje 'm' a cifrar
+			#c  es la longitud del mensaje 'c' cifrado
+			#Pi = #Ci = b  para 1<=i<n
+			#Pn = #Cn = u
+	No hay mensajes de longitud 0.
+
+	CTR se define como:
+		Ci := Pi⊕E(K,Ti)
+		Cn := Pn⊕msb(u,E(K,Tn))
+		donde:
+			i = 1,···,n-1
+			T1,···,Tn son los bloques contadores
+			msb es la bunción que extrae los bits mas significativos
+			u es la longitud del último bloque
+	Para descifrar:
+		Pi := Ci⊕E(K,Ti)
+		Pn := Cn⊕msb(u,E(K,Tn))
+	CTR no usa la funcion de descifrado, 'D'.
+
+	Para evitar las vulnerabilidades, la condicion a cumplir por los bloques contadores es que sean 
+	distintos entre si, no solo dentro de un mismo mensaje, sino para todos los mensajes encriptados 
+	con la misma clave 'K'.
+
+	En CTR, el cálculo de cada Ti y de cada E(K,Ti) se puede hacer de forma independiente de el 
+	cifrado y descifrado del mensaje.
+
+
+	RSA (Rivest–Shamir–Adleman)
+	---------------------------
+
+	RSA es un algoritmo de encriptación de clave simetrica. También se usa en firmas digitales.
+	
+	Una de las caracteristicas de RSA es la longitud de la clave. RSA se considera seguro a partir 
+	de 2048 bits.
+
+	RSA es poco eficiente, se usa solamente para establecer los parámetros del sistema, en 
+	particular las claves simetricas y de autenticación.
+
+	El uso de RSA por si solo lleva a ciertas vulnerabilidades que aparecen cuando el mensaje a 
+	encriptar es de poca longitud. Para evitarlo se usa RSA junto con un esquema de relleno 
+	('padding').
+
+
+	OAEP (Optimal asymmetric encryption padding)
+	--------------------------------------------
+
+	OAEP es un esquema de relleno que se usa con la encriptacion RSA. 
+	
+	Hay variantes en OAEP que usan internamente funciones hash. La mas conveniente es OAEP_SHA512
+	que usa la funcion hash SHA-512.
+
+	Según el RFC-8017 la encriptación RSAES-OAEP-ENCRYPT limita la longitud del mensaje a encriptar.
+    Tomando las definiciones:
+        M           message to be encrypted, an octet string
+        mLen        length in octets of a message M
+        K           RSA private key
+        k           length in octets of the RSA modulus n  
+        Hash        hash function
+        hLen        length in octets of the hash function output
+    se debe cumplir que:
+        mLen <= k - 2·hLen - 2 
+    En este caso:  
+        Hash = SHA-512,  
+        hLen = 512 / 8 = 64,  
+        k = 2048 / 8 = 256, 
+    luego:
+        mLen <= 256 - 2·64 - 2 = 126 bytes
+	si se supera esta longitud, se produce un error.
+        
+
+
+

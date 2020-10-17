@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile></DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="CreaClavesRSA\**" />
+    <Compile Remove="PruebaCliente\**" />
+    <Compile Remove="PruebaServidor\**" />
+    <EmbeddedResource Remove="CreaClavesRSA\**" />
+    <EmbeddedResource Remove="PruebaCliente\**" />
+    <EmbeddedResource Remove="PruebaServidor\**" />
+    <None Remove="CreaClavesRSA\**" />
+    <None Remove="PruebaCliente\**" />
+    <None Remove="PruebaServidor\**" />
+  </ItemGroup>
+
+</Project>
