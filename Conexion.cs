@@ -77,7 +77,8 @@ namespace com.mazc.Sistema {
 
 
         #region constantes privadas
-                                         
+        
+        // marcas para hacer la validación de los tipos de datos trasmitidos
         private const byte marca_bool    = 70;
         private const byte marca_long    = 71;
         private const byte marca_int     = 72;
@@ -85,37 +86,54 @@ namespace com.mazc.Sistema {
         private const byte marca_byte    = 74;
         private const byte marca_string  = 75;
         private const byte marca_paquete = 81;
-                
+         
+        // bytes de la cabecera del paquete: 
+        // marca de paquete (un byte) y longitud del paquete (4 bytes) 
         private const int cabecera_paquete = 5;
 
         #endregion
 
 
-        #region  variables privadas
-                                         
+        #region variables privadas
+        
+        // indica si se ha iniciado la conexión
         private bool iniciada;
+        // indica con que papel se ha iniciado la conexión
         private bool de_servidor; 
 		private bool de_servicio;
 		private bool de_cliente;
+        // indica que se ha producido un error en la conexión
         private bool erronea;
+        // indica que el cliente remoto ha cerrado la conexión (solo para conexiones de servicio)
         private bool cerrada;
 
+        // indica si se ha activado la seguridad (el canal seguro)
         private Seguridad seguridad;
 
+        // implementación en .Net de los 'sockets' de Unix
         private Socket socket;
 
-        // si seguridad es nulo, se usan estos buzones
-        // en caso contrario, se usan los buzones de seguridad
-        private Buzon buzon_paquete;
-        // buzon_mensaje es un fragmento de buzon_paquete
+        // si seguridad es nulo, solo se usan estos buzones y coinciden entre si
+        // si seguridad está activa, se usan también los buzones de 'seguridad' y 
+        // 'buzon_paquete' está contenido en 'buzon_mensaje'
+        // buzon que almacena los datos a enviar o los datos recibidos
         private Buzon buzon_mensaje;
+        // fragmento de 'buzon_mensaje' con los datos (en paquete o sueltos)
+        private Buzon buzon_paquete;
     
+        // indica que hay un paquete recibido con datos pendientes de extraer
         private bool paquete_entrada;
+        // indica que hay un paquete con datos agregados pendiente de enviar
         private bool paquete_salida;
 
+        // en paquete de salida: longitud actual del paquete, incluyendo cabecera
+        // en paquete de entrada: longitud del paquete recibido, incluyendo cabecera
         private int longitud_paquete;
+        // en paquete de salida: posición donde continuar agregando datos
+        // en paquete de entrada: posición donde continuar extrayendo datos
         private int posicion_paquete;
 
+        // variable local de ''
         private StringBuilder fabrica_cadena;
 
         #endregion
@@ -136,8 +154,10 @@ namespace com.mazc.Sistema {
         /// <param name="clave_privada">clave privada del cifrado 'RSA' usada por el canal seguro
         /// </param>
         public void AseguraServidor (byte [] clave_privada) {
+            #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
             Depuracion.Valida (seguridad != null, "Conexión ya asegurada.");
+            #endif
             //
             seguridad = new Seguridad ();
             seguridad.ActivaDeServidor (clave_privada);
@@ -159,8 +179,10 @@ namespace com.mazc.Sistema {
         /// <param name="clave_privada">clave pública del cifrado 'RSA' usada por el canal seguro
         /// </param>
         public void AseguraCliente (byte [] clave_publica) {
+            #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
             Depuracion.Valida (seguridad != null, "Conexión ya asegurada.");
+            #endif
             //
             seguridad = new Seguridad ();
             seguridad.ActivaDeCliente (clave_publica);
@@ -183,11 +205,13 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. Es este caso la 
         /// conexión no estará iniciada.</exception>
         public void IniciaServidor (int servicio) {
+            #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
             Depuracion.Valida (1024 >= servicio || servicio > IPEndPoint.MaxPort, "servicio inválido: '" + servicio + "'");
             if (seguridad != null) {
                 Depuracion.Valida (! seguridad.DeServidor, "Seguridad mal establecida.");
             }
+            #endif
             //
             try {
                 IPEndPoint punto_final = new IPEndPoint (IPAddress.Any, servicio);
@@ -219,8 +243,10 @@ namespace com.mazc.Sistema {
         /// <returns>Instancia nueva de 'Conexion' que se comunicará con el cliente.</returns>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public Conexion AceptaCliente () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no iniciada.");
             Depuracion.Valida (! de_servidor, "No es conexión de servidor");
+            #endif
             //
             Conexion conexion = new Conexion ();
             try {
@@ -258,12 +284,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. Es este caso la 
         /// conexión no estará iniciada.</exception>
         public void IniciaCliente (string servidor, int servicio) {
+            #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
             Depuracion.Valida (servidor == null || servidor.Length <= 0, "servidor inválido: '" + servidor + "'");
             if (seguridad != null) {
                 Depuracion.Valida (! seguridad.DeCliente, "Seguridad mal establecida.");
             }
             Depuracion.Valida (1024 >= servicio || servicio > IPEndPoint.MaxPort, "servicio inválido: '" + servicio + "'");
+            #endif
             //
             try {
                 //IPHostEntry ip_servidor = Dns.GetHostEntry (servidor);
@@ -299,12 +327,14 @@ namespace com.mazc.Sistema {
         /// un método 'Recibe...', este lanza la excepción 'ConexionInterrumpida'.
         /// </remarks>
         public void Termina () {
+            #if DEBUG
+            Depuracion.Valida (paquete_entrada, "Paquete de entrada no consumido");
+            Depuracion.Valida (paquete_salida,  "Paquete de salida no consumido");
+            #endif
+            //
             if (! iniciada) {
                 return;
             }
-            //
-            Depuracion.Valida (paquete_entrada, "Paquete de entrada no consumido");
-            Depuracion.Valida (paquete_salida,  "Paquete de salida no consumido");
             //
 	        if (de_cliente) {
                 //
@@ -355,12 +385,14 @@ namespace com.mazc.Sistema {
         /// <param name="numero">Número a enviar.</param>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public void EnviaLongInt (long numero) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (9);
             buzon_paquete [0] = marca_long;
@@ -388,12 +420,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. O bién, los datos 
         /// recibidos no son del tipo correcto.</exception>
         public long RecibeLongInt () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (9);
             RecibeConexion (0, 9);
@@ -416,12 +450,14 @@ namespace com.mazc.Sistema {
         /// <param name="numero">Número a enviar.</param>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public void EnviaInteger (int numero) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (5);
             buzon_paquete [0] = marca_int;
@@ -449,12 +485,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. O bién, los datos 
         /// recibidos no son del tipo correcto.</exception>
         public int RecibeInteger () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (5);
             RecibeConexion (0, 5);
@@ -477,12 +515,14 @@ namespace com.mazc.Sistema {
         /// <param name="numero">Número a enviar.</param>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public void EnviaShortInt (short numero) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (3);
             buzon_paquete [0] = marca_short;
@@ -510,12 +550,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. O bién, los datos 
         /// recibidos no son del tipo correcto.</exception>
         public short RecibeShortInt () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (3);
             RecibeConexion (0, 3);
@@ -538,12 +580,14 @@ namespace com.mazc.Sistema {
         /// <param name="numero">Número a enviar.</param>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public void EnviaByte (byte numero) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (2);        
             buzon_paquete [0] = marca_byte;
@@ -571,12 +615,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. O bién, los datos 
         /// recibidos no son del tipo correcto.</exception>
         public byte RecibeByte () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (2);
             RecibeConexion (0, 2);
@@ -600,12 +646,14 @@ namespace com.mazc.Sistema {
         /// <param name="numero">Cadena de caracteres a enviar.</param>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public void EnviaString (String cadena) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             if (cadena == null) {
                 cadena = "";
@@ -638,12 +686,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. O bién, los datos 
         /// recibidos no son del tipo correcto.</exception>
         public String RecibeString () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (5);
             RecibeConexion (0, 5);
@@ -679,9 +729,11 @@ namespace com.mazc.Sistema {
         /// </remarks>
         /// <param name="numero">Valor booleano a enviar.</param>
         public void AgregaBoolean (bool valor) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
+            #endif
             //
             if (! paquete_salida) {
                 paquete_salida = true;
@@ -713,9 +765,11 @@ namespace com.mazc.Sistema {
         /// </remarks>
         /// <param name="numero">Número a enviar.</param>
         public void AgregaLongInt (long numero) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
+            #endif
             //
             if (! paquete_salida) {
                 paquete_salida = true;
@@ -743,9 +797,11 @@ namespace com.mazc.Sistema {
         /// </remarks>
         /// <param name="numero">Número a enviar.</param>
         public void AgregaInteger (int numero) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
+            #endif
             //
             if (! paquete_salida) {
                 paquete_salida = true;
@@ -773,9 +829,11 @@ namespace com.mazc.Sistema {
         /// </remarks>
         /// <param name="numero">Cadena de caracteres a enviar.</param>
         public void AgregaString (String cadena) {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
+            #endif
             //
             if (cadena == null) {
                 cadena = "";
@@ -811,12 +869,14 @@ namespace com.mazc.Sistema {
         /// </remarks>
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red.</exception>
         public void EnviaPaquete () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (! paquete_salida, "Paquete no preparado.");
+            #endif
             //
             buzon_paquete [0] = marca_paquete;
             buzon_paquete.PonInt (1, longitud_paquete);
@@ -847,12 +907,14 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Si se ha producido un error en la red. O bién, los datos 
         /// recibidos no son del tipo correcto.</exception>
         public void RecibePaquete () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (cerrada, "Conexión cerrada.");
             Depuracion.Valida (erronea, "Conexión erronea.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (paquete_entrada, "Paquete recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             PreparaBuzones (5);
             RecibeConexion (0, 5);
@@ -885,10 +947,12 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Los datos extraidos no son del tipo correcto.
         /// </exception>
         public bool ExtraeBoolean () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (! paquete_entrada, "Paquete no recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             if (longitud_paquete - posicion_paquete < 2) {
                 paquete_entrada = false;
@@ -922,10 +986,12 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Los datos extraidos no son del tipo correcto.
         /// </exception>
         public long ExtraeLongInt () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (! paquete_entrada, "Paquete no recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             if (longitud_paquete - posicion_paquete < 9) {
                 paquete_entrada = false;
@@ -959,10 +1025,12 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Los datos extraidos no son del tipo correcto.
         /// </exception>
         public int ExtraeInteger () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (! paquete_entrada, "Paquete no recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             if (longitud_paquete - posicion_paquete < 5) {
                 paquete_entrada = false;
@@ -996,10 +1064,12 @@ namespace com.mazc.Sistema {
         /// <exception cref="ErrorConexion">Los datos extraidos no son del tipo correcto.
         /// </exception>
         public String ExtraeString () {
+            #if DEBUG
             Depuracion.Valida (! iniciada, "Conexión no  iniciada.");
             Depuracion.Valida (de_servidor, "Es conexión de servidor.");
             Depuracion.Valida (! paquete_entrada, "Paquete no recibido.");
             Depuracion.Valida (paquete_salida, "Paquete en preparación.");
+            #endif
             //
             if (longitud_paquete - posicion_paquete < 5) {
                 paquete_entrada = false;
@@ -1041,20 +1111,25 @@ namespace com.mazc.Sistema {
         #region métodos privados
 
 
+        // prepara los buzones para que admitan datos de la longitud indicada, los buzones crecen, 
+        // pero no disminuyen
         private void PreparaBuzones (int longitud) {
             // será	longitud > 0
             //
+            // si se activó la seguridad (canal seguro) es ella quien prepara los buzones, 
+            // incluyendo 'buzon_paquete' y 'buzon_mensaje'
             if (seguridad != null) {
                 seguridad.PreparaBuzones (longitud);
                 return;
             }
             //
-    	    if (buzon_paquete.Longitud == 0) {
+            if (buzon_paquete.Longitud == 0) {
                 buzon_mensaje.Reserva (longitud);
                 buzon_mensaje.CreaFragmento (0, longitud, ref buzon_paquete);
                 return;
             }
             if (buzon_paquete.Longitud < longitud) {
+                // se necesita hacer un buzon nuevo y cambiarlo por el antiguo
                 buzon_mensaje.AnulaFragmento (ref buzon_paquete);
                 Buzon nuevo = new Buzon ();
                 nuevo.Reserva (longitud);
@@ -1095,7 +1170,7 @@ namespace com.mazc.Sistema {
             // primera llamada se hace con 'posicion' igual a cero, y la segunda distinto de cero.
             // 'Seguridad' encapsula el mensaje en su propio formato y debe desencriptar el mensaje 
             // completo. Por eso recibe el mensaje completo en la primera llamada, con 'posicion' igual 
-            // a cero, e ignora la segunda llamada y además de ignora 'longitud'.
+            // a cero, e ignora la segunda llamada y además ignora 'longitud'.
             if (seguridad != null) {
                 if (posicion == 0) {
                     seguridad.Recibe ();
