@@ -3,7 +3,7 @@
     Formato Multibyte (Endianness)
     -------------------------------
 
-    Indica la forma en la que se almacenan los datos de varios bytes en la memoria de in ordenador. 
+    Indica la forma en la que se almacenan los datos de varios bytes en la memoria de un ordenador. 
     Hay dos formatos: 'big-endian' y 'little-endian'.
 
     La manera natural de escribir (en un papel) números de varios bytes (en hexadecimal) es escribir 
