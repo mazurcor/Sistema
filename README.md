@@ -1,2 +1,2 @@
 # Sistema
-Desarrollo de un canal seguro de comunicación en .Net
+Desarrollo de un canal seguro de comunicación en .Net.
