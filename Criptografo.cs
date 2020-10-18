@@ -1,4 +1,12 @@
-﻿using System;
+﻿//------------------------------------------------------------------------------
+// archivo:     Sistema/Conexion.cs
+// versión:     18-Oct-2020
+// autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
+// licencia:    Licencia Pública General de GNU, versión 3
+//------------------------------------------------------------------------------
+ 
+
+using System;
 using System.Linq.Expressions;
 using System.Security.Cryptography;
 using System.Text;
