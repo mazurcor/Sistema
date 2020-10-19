@@ -1,4 +1,5 @@
 ﻿// no sé como hacer esto
+// más adelante lo pensaré
 
 
 using System;
