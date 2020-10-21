@@ -27,6 +27,10 @@ namespace com.mazc.Sistema {
     public class ErrorConexion : Exception {
 
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="mensaje">El mensaje.</param>
         public ErrorConexion (string mensaje) :
             base (mensaje) {
         }
@@ -43,6 +47,9 @@ namespace com.mazc.Sistema {
     public class ConexionInterrumpida : Exception {
 
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public ConexionInterrumpida () :
             base () {
         }
@@ -104,7 +111,7 @@ namespace com.mazc.Sistema {
 
         #region variables privadas
         
-        // indica si se ha iniciado la conexión
+        // indica que se ha iniciado la conexión
         private bool iniciada;
         // indica con que papel se ha iniciado la conexión
         private bool de_servidor; 
@@ -115,7 +122,7 @@ namespace com.mazc.Sistema {
         // indica que el cliente remoto ha cerrado la conexión (solo para conexiones de servicio)
         private bool cerrada;
 
-        // indica si se ha activado la seguridad (el canal seguro)
+        // implementa la seguridad (el canal seguro)
         private Seguridad seguridad;
 
         // implementación en .Net de los 'sockets' de Unix
@@ -148,6 +155,14 @@ namespace com.mazc.Sistema {
 
 
         /// <summary>
+        /// Constructor.
+        /// </summary>
+        public Conexion () {
+            seguridad = new Seguridad (this);
+        }
+
+
+        /// <summary>
         /// Establece que la instancia se comunicará usando el canal seguro y asigna la clave 
         /// privada del cifrado 'RSA' usada por el canal seguro. 
         /// </summary>
@@ -164,10 +179,9 @@ namespace com.mazc.Sistema {
         public void AseguraServidor (byte [] clave_privada) {
             #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
-            Depuracion.Valida (seguridad != null, "Conexión ya asegurada.");
+            Depuracion.Valida (seguridad.Activa, "Conexión ya asegurada.");
             #endif
             //
-            seguridad = new Seguridad ();
             seguridad.ActivaDeServidor (clave_privada);
         }
 
@@ -189,10 +203,9 @@ namespace com.mazc.Sistema {
         public void AseguraCliente (byte [] clave_publica) {
             #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
-            Depuracion.Valida (seguridad != null, "Conexión ya asegurada.");
+            Depuracion.Valida (seguridad.Activa, "Conexión ya asegurada.");
             #endif
             //
-            seguridad = new Seguridad ();
             seguridad.ActivaDeCliente (clave_publica);
         }
 
@@ -216,7 +229,7 @@ namespace com.mazc.Sistema {
             #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
             Depuracion.Valida (1024 >= servicio || servicio > IPEndPoint.MaxPort, "servicio inválido: '" + servicio + "'");
-            if (seguridad != null) {
+            if (seguridad.Activa) {
                 Depuracion.Valida (! seguridad.DeServidor, "Seguridad mal establecida.");
             }
             #endif
@@ -267,8 +280,7 @@ namespace com.mazc.Sistema {
             conexion.erronea     = false;
             conexion.cerrada     = false;
             //
-            if (seguridad != null) {
-                conexion.seguridad = new Seguridad ();
+            if (seguridad.Activa) {
                 conexion.seguridad.ActivaDeServicio (seguridad);
             }
             //
@@ -295,7 +307,7 @@ namespace com.mazc.Sistema {
             #if DEBUG
             Depuracion.Valida (iniciada, "Conexión iniciada.");
             Depuracion.Valida (servidor == null || servidor.Length <= 0, "servidor inválido: '" + servidor + "'");
-            if (seguridad != null) {
+            if (seguridad.Activa) {
                 Depuracion.Valida (! seguridad.DeCliente, "Seguridad mal establecida.");
             }
             Depuracion.Valida (1024 >= servicio || servicio > IPEndPoint.MaxPort, "servicio inválido: '" + servicio + "'");
@@ -369,7 +381,9 @@ namespace com.mazc.Sistema {
             socket.Close ();
             socket.Dispose ();
             //
-            if (seguridad == null) {
+            if (seguridad.Activa) {
+                seguridad.Desactiva ();
+            } else {
                 if (buzon_paquete.Longitud > 0) {
                     buzon_mensaje.AnulaFragmento (ref buzon_paquete);
                     buzon_mensaje.Libera ();
@@ -1126,7 +1140,7 @@ namespace com.mazc.Sistema {
             //
             // si se activó la seguridad (canal seguro) es ella quien prepara los buzones, 
             // incluyendo 'buzon_paquete' y 'buzon_mensaje'
-            if (seguridad != null) {
+            if (seguridad.Activa) {
                 seguridad.PreparaBuzones (longitud);
                 return;
             }
@@ -1163,7 +1177,7 @@ namespace com.mazc.Sistema {
     
         // throws ErrorConexion 
         private void EnviaConexion (int longitud) {
-            if (seguridad != null) {
+            if (seguridad.Activa) {
                 seguridad.Envia ();
                 return;
             }
@@ -1179,7 +1193,7 @@ namespace com.mazc.Sistema {
             // 'Seguridad' encapsula el mensaje en su propio formato y debe desencriptar el mensaje 
             // completo. Por eso recibe el mensaje completo en la primera llamada, con 'posicion' igual 
             // a cero, e ignora la segunda llamada y además ignora 'longitud'.
-            if (seguridad != null) {
+            if (seguridad.Activa) {
                 if (posicion == 0) {
                     seguridad.Recibe ();
                 }
