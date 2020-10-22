@@ -448,9 +448,9 @@ namespace com.mazc.Sistema {
         private bool contador_leido;
 
         // valores contenidos en el contador
-        private ulong numero_serie;
-        private uint  numero_mensaje;
-        private uint  numero_bloque;
+        private long numero_serie;
+        private int  numero_mensaje;
+        private int  numero_bloque;
 
         // almacena el contador preparado
         private byte [] buzon_contador;
@@ -482,7 +482,7 @@ namespace com.mazc.Sistema {
 
 
         // Indica si la marca de serie es nueva, comparandola con la anterior.
-        private bool SerieNueva (ulong serie) {
+        private bool SerieNueva (long serie) {
             if (! serie_iniciada) {
                 return true;
             }
@@ -504,7 +504,7 @@ namespace com.mazc.Sistema {
 
 
         // Pone en el buzón del contador el número indicado en la posición indicada.
-        private void PonNumeroBuzon (uint numero, int inicio) {
+        private void PonNumeroBuzon (int numero, int inicio) {
             buzon_contador [inicio    ] = (byte) (numero >> 24);
             buzon_contador [inicio + 1] = (byte) (numero >> 16);
             buzon_contador [inicio + 2] = (byte) (numero >>  8);
@@ -525,7 +525,7 @@ namespace com.mazc.Sistema {
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
         /// <param name="serie">marca de la nueva serie, </param>
-        public void IniciaSerie (ulong serie, uint mensaje) {
+        public void IniciaSerie (long serie, int mensaje) {
             Depuracion.Asevera (! serie_iniciada || contador_leido);
             // valida que la marca de serie previa es distinta de la indicada
             Depuracion.Asevera (SerieNueva (serie));
@@ -593,7 +593,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número del mensaje del contador. Recorre los valores:  1, ···, MaximoNumero, 0 
         /// </summary>
-        public uint NumeroMensaje {
+        public int NumeroMensaje {
             get {
                 return numero_mensaje;
             }
@@ -603,7 +603,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número de bloque del contador. Recorre los valores:  0, ···, MaximoNumero
         /// </summary>
-        public uint NumeroBloque {
+        public int NumeroBloque {
             get {
                 return numero_bloque;
             }
@@ -613,7 +613,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número de serie del contador. Es el asignado en 'IniciaSerie'.
         /// </summary>
-        public ulong NumeroSerie {
+        public long NumeroSerie {
             get {
                 return numero_serie;
             }
@@ -646,8 +646,8 @@ namespace com.mazc.Sistema {
 
         private static void Valida () {
             ContadorCTR CTR = new ContadorCTR ();
-            UInt64 serie1 = 0xF0F1F2F3F4F5F6F7;
-            UInt64 serie2 = 0xE8E9EAEBECEDEEEF;
+            long serie1 = 0x0F1F2F3F4F5F6F7F;
+            long serie2 = 0x7E8E9EAEBECEDEEE;
             //
             CTR.IniciaSerie (serie1, 0);
             Imprime (CTR);
