@@ -447,6 +447,11 @@ namespace com.mazc.Sistema {
         // indica si el bloque contador preparado se ha leido (con 'AsignaContador')
         private bool contador_leido;
 
+        // valores contenidos en el contador
+        private ulong numero_serie;
+        private uint  numero_mensaje;
+        private uint  numero_bloque;
+
         // almacena el contador preparado
         private byte [] buzon_contador;
 
@@ -458,17 +463,16 @@ namespace com.mazc.Sistema {
         private const int inicio_serie   = inicio_bloque + bytes_bloque;
         private const int inicio_mensaje = inicio_serie  + bytes_serie;
 
-        // valores contenidos en el contador
-        private byte [] marca_serie;
-        private int numero_mensaje;
-        private int numero_bloque;
-
         #endregion
 
 
         /// <summary>
         /// Constructor.
         /// </summary>
+        /// <remarks>
+        /// El número de mensaje y el número bloque serán cero.
+        /// El contador no puede ser leido.
+        /// </remarks>
         public ContadorCTR () {
             buzon_contador = new byte [BytesContador];
         }
@@ -478,38 +482,29 @@ namespace com.mazc.Sistema {
 
 
         // Indica si la marca de serie es nueva, comparandola con la anterior.
-        private bool SerieNueva (byte [] serie) {
-            if (marca_serie == null) {
+        private bool SerieNueva (ulong serie) {
+            if (! serie_iniciada) {
                 return true;
             }
-            for (int i = 0; i < BytesContador; ++ i) {
-                if (marca_serie [i] != serie [i]) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-
-        // Almacena la marca de serie para ser usada en los contadores
-        private void GuardaSerie (byte [] serie) {
-            if (marca_serie == null) {
-                marca_serie = new byte [BytesContador];
-            }
-            Buffer.BlockCopy (serie, 0, marca_serie, 0, BytesContador);
+            return numero_serie != serie;
         }
 
 
         // Pone en el buzon del contador la marca de serie actual.
         private void PonSerieBuzon () {
-            for (int i = 0; i < bytes_serie; ++ i) {
-                buzon_contador [inicio_serie + i] = marca_serie [i];
-            }
+            buzon_contador [inicio_serie    ] = (byte) (numero_serie >> 56);
+            buzon_contador [inicio_serie + 1] = (byte) (numero_serie >> 48);
+            buzon_contador [inicio_serie + 2] = (byte) (numero_serie >> 40);
+            buzon_contador [inicio_serie + 3] = (byte) (numero_serie >> 32);
+            buzon_contador [inicio_serie + 4] = (byte) (numero_serie >> 24);
+            buzon_contador [inicio_serie + 5] = (byte) (numero_serie >> 16);
+            buzon_contador [inicio_serie + 6] = (byte) (numero_serie >>  8);
+            buzon_contador [inicio_serie + 7] = (byte) (numero_serie      );
         }
 
 
         // Pone en el buzón del contador el número indicado en la posición indicada.
-        private void PonNumeroBuzon (int numero, int inicio) {
+        private void PonNumeroBuzon (uint numero, int inicio) {
             buzon_contador [inicio    ] = (byte) (numero >> 24);
             buzon_contador [inicio + 1] = (byte) (numero >> 16);
             buzon_contador [inicio + 2] = (byte) (numero >>  8);
@@ -526,22 +521,20 @@ namespace com.mazc.Sistema {
         /// </summary>
         /// <remarks>
         /// Los contadores de la serie usarán la marca de serie indicada. El primer contador de 
-        /// la serie usara el número de mensaje 1 y el número de bloque 0.
+        /// La serie usará el número de mensaje 1 y el número de bloque 0.
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
         /// <param name="serie">marca de la nueva serie, </param>
-        public void IniciaSerie (byte [] serie) {
+        public void IniciaSerie (ulong serie, uint mensaje) {
             Depuracion.Asevera (! serie_iniciada || contador_leido);
-            Depuracion.Asevera (serie != null);
-            Depuracion.Asevera (serie.Length == BytesContador);
             // valida que la marca de serie previa es distinta de la indicada
             Depuracion.Asevera (SerieNueva (serie));
             //
-            GuardaSerie (serie);
-            numero_mensaje = 1;
+            numero_serie   = serie;
+            numero_mensaje = mensaje;
             numero_bloque  = 0;
             //
-            PonSerieBuzon ();
+            PonSerieBuzon  ();
             PonNumeroBuzon (numero_mensaje, inicio_mensaje);
             PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
@@ -600,7 +593,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número del mensaje del contador. Recorre los valores:  1, ···, MaximoNumero, 0 
         /// </summary>
-        public int NumeroMensaje {
+        public uint NumeroMensaje {
             get {
                 return numero_mensaje;
             }
@@ -610,9 +603,19 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número de bloque del contador. Recorre los valores:  0, ···, MaximoNumero
         /// </summary>
-        public int NumeroBloque {
+        public uint NumeroBloque {
             get {
                 return numero_bloque;
+            }
+        }
+
+
+        /// <summary>
+        /// Número de serie del contador. Es el asignado en 'IniciaSerie'.
+        /// </summary>
+        public ulong NumeroSerie {
+            get {
+                return numero_serie;
             }
         }
 
@@ -643,21 +646,17 @@ namespace com.mazc.Sistema {
 
         private static void Valida () {
             ContadorCTR CTR = new ContadorCTR ();
-            byte [] serie1 = new byte [] {
-                    0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 
-                    0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF  };
-            byte [] serie2 = new byte [] {
-                    0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 
-                    0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEE, 0xEF  };
+            UInt64 serie1 = 0xF0F1F2F3F4F5F6F7;
+            UInt64 serie2 = 0xE8E9EAEBECEDEEEF;
             //
-            CTR.IniciaSerie (serie1);
+            CTR.IniciaSerie (serie1, 0);
             Imprime (CTR);
             for (int i = 1; i < 10; ++ i) {
                 CTR.IncrementaBloque ();
                 Imprime (CTR);
             }
 
-            CTR.IniciaSerie (serie2);
+            CTR.IniciaSerie (serie2, 0);
             Imprime (CTR);
             for (int i = 1; i < 10; ++ i) {
                 CTR.IncrementaBloque ();
@@ -692,7 +691,7 @@ namespace com.mazc.Sistema {
             byte [] contador = new byte [ContadorCTR.BytesContador];
             CTR.AsignaContador (contador, 0);
             for (int i = 0; i < ContadorCTR.BytesContador; ++ i) {
-                Console.Write ("{0:X}", contador [i]);
+                Console.Write ("{0:X2}", contador [i]);
             }
             Console.WriteLine ();
         }

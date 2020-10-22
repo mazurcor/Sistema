@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------------------------
 // archivo:     Sistema/Buzon.cs
-// versión:     18-Oct-2020
+// versión:     22-Oct-2020
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ using System.Text;
 namespace com.mazc.Sistema {
 
 
-    struct Buzon {
+    internal struct Buzon {
 
 
         #region variables privadas
@@ -51,25 +51,10 @@ namespace com.mazc.Sistema {
             }
         }
 
-       
-        internal byte this [int indice] {
+
+        internal bool Fragmento {
             get {
-                #if DEBUG
-                Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-                Depuracion.Valida (indice < 0, "'indice' inválido.");
-                Depuracion.Valida (this.longitud <= indice, "'indice' inválido.");
-                #endif
-                //
-                return this.almacen [this.inicio + indice];
-            }
-            set {
-                #if DEBUG
-                Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-                Depuracion.Valida (indice < 0, "'indice' inválido.");
-                Depuracion.Valida (this.longitud <= indice, "'indice' inválido.");
-                #endif
-                //
-                this.almacen [this.inicio + indice] = value;
+                return fragmentos < 0;
             }
         }
 
@@ -140,11 +125,10 @@ namespace com.mazc.Sistema {
         internal void CreaFragmento (int inicio_, int longitud_, ref Buzon fragmento) {
             #if DEBUG
             Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Valida (fragmento.almacen != null, "'fragmento' no vacío");
             Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
+            Depuracion.Valida (fragmento.almacen != null, "'fragmento' no vacío");
             Depuracion.Valida (inicio_ < 0, "'inicio' inválido.");
             Depuracion.Valida (longitud_ <= 0, "'longitud' inválida.");
-            Depuracion.Valida (inicio_ >= this.longitud, "'inicio' excesivo.");
             Depuracion.Valida (inicio_ + longitud_ - 1 >= this.longitud, "'longitud' excesivo.");
             #endif
             //
@@ -159,11 +143,12 @@ namespace com.mazc.Sistema {
         internal void AnulaFragmento (ref Buzon fragmento) {
             #if DEBUG
             Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Valida (fragmento.almacen == null, "'fragmento' vacío");
             Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
             Depuracion.Valida (this.fragmentos == 0, "Este no tiene fragmentos.");
+            Depuracion.Valida (fragmento.almacen == null, "'fragmento' vacío");
             Depuracion.Valida (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
-            Depuracion.Valida (fragmento.almacen != this.almacen, "'fragmento' no es fragmento de este");
+            Depuracion.Valida (fragmento.almacen != this.almacen, 
+                               "'fragmento' no es fragmento de este");
             #endif
             //
             fragmento.almacen    = null;
@@ -174,12 +159,55 @@ namespace com.mazc.Sistema {
         }
 
 
+        internal void ResituaFragmento (ref Buzon fragmento, int medida) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
+            Depuracion.Valida (this.fragmentos == 0, "Este no tiene fragmentos.");
+            Depuracion.Valida (fragmento.almacen == null, "'fragmento' es vacío");
+            Depuracion.Valida (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
+            Depuracion.Valida (fragmento.almacen != this.almacen, 
+                               "'fragmento' no es fragmento de este");
+            // this.inicio será 0
+            int poscn_fragm = fragmento.inicio;
+            int final_fragm = fragmento.inicio + fragmento.longitud - 1;
+            poscn_fragm += medida;
+            final_fragm += medida;
+            Depuracion.Valida (poscn_fragm < 0, "'fragmento' se situa fuera");
+            Depuracion.Valida (this.longitud - 1 < final_fragm, "'medida' inválida.");
+            #endif
+            //
+            fragmento.inicio += medida;
+        }
+
+
+        internal void RedimensionaFragmento (ref Buzon fragmento, int medida) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
+            Depuracion.Valida (this.fragmentos == 0, "Este no tiene fragmentos.");
+            Depuracion.Valida (fragmento.almacen == null, "'fragmento' es vacío");
+            Depuracion.Valida (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
+            Depuracion.Valida (fragmento.almacen != this.almacen, 
+                               "'fragmento' no es fragmento de este");
+            // this.inicio será 0
+            int poscn_fragm = fragmento.inicio;
+            int final_fragm = fragmento.inicio + fragmento.longitud - 1;
+            final_fragm += medida;
+            Depuracion.Valida (final_fragm < poscn_fragm, "'medida' inválida.");
+            Depuracion.Valida (this.longitud - 1 < final_fragm, "'fragmento' se situa fuera");
+            #endif
+            //
+            fragmento.inicio += medida;
+        }
+
+
         internal void TrasponBuzon (ref Buzon origen) {
             #if DEBUG
             // admite buzon vacío y no vacío
-            Depuracion.Valida (origen.almacen == null, "'origen' vacío.");
             Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
             Depuracion.Valida (this.fragmentos > 0, "Quedan fragmentos de este 'Buzon'.");
+            Depuracion.Valida (origen.almacen == null, "'origen' vacío.");
             Depuracion.Valida (origen.fragmentos < 0, "'origen' es fragmento de otro 'Buzon'.");
             Depuracion.Valida (origen.fragmentos > 0, "Quedan fragmentos de 'origen'.");
             #endif
@@ -192,49 +220,6 @@ namespace com.mazc.Sistema {
             origen.inicio     = 0;
             origen.longitud   = 0;
             origen.fragmentos = 0;
-        }
-
-
-        internal void ResituaFragmento (ref Buzon fragmento, int medida) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Valida (fragmento.almacen == null, "'fragmento' es vacío");
-            Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Valida (this.fragmentos == 0, "Este no tiene fragmentos.");
-            Depuracion.Valida (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
-            Depuracion.Valida (fragmento.almacen != this.almacen, "'fragmento' no es fragmento de este");
-            int poscn_compl = this.inicio;
-            int final_compl = this.inicio + this.longitud - 1;
-            int poscn_fragm = fragmento.inicio;
-            int final_fragm = fragmento.inicio + fragmento.longitud - 1;
-            poscn_fragm += medida;
-            final_fragm += medida;
-            Depuracion.Valida (poscn_fragm < poscn_compl, "'fragmento' se situa fuera");
-            Depuracion.Valida (final_compl < final_fragm, "'medida' inválida.");
-            #endif
-            //
-            fragmento.inicio += medida;
-        }
-
-
-        internal void RedimensionaFragmento (ref Buzon fragmento, int medida) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Valida (fragmento.almacen == null, "'fragmento' es vacío");
-            Depuracion.Valida (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Valida (this.fragmentos == 0, "Este no tiene fragmentos.");
-            Depuracion.Valida (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
-            Depuracion.Valida (fragmento.almacen != this.almacen, "'fragmento' no es fragmento de este");
-            int poscn_compl = this.inicio;
-            int final_compl = this.inicio + this.longitud - 1;
-            int poscn_fragm = fragmento.inicio;
-            int final_fragm = fragmento.inicio + fragmento.longitud - 1;
-            final_fragm += medida;
-            Depuracion.Valida (final_compl < final_fragm, "'fragmento' se situa fuera");
-            Depuracion.Valida (final_fragm < poscn_fragm, "'medida' inválida.");
-            #endif
-            //
-            fragmento.inicio += medida;
         }
 
 
@@ -256,26 +241,6 @@ namespace com.mazc.Sistema {
                 longitud --;
             }
             return true;
-        }
-
-
-        internal static void CopiaDatos (in Buzon origen, ref Buzon destino) {
-            #if DEBUG
-            Depuracion.Valida (origen .almacen == null, "'origen' vacío");
-            Depuracion.Valida (destino.almacen == null, "'destino' vacío");
-            origen .ValidaRango (0, origen.longitud);
-            destino.ValidaRango (0, origen.longitud);
-            #endif
-            //
-            int indice_origen  = origen.inicio;
-            int indice_destino = destino.inicio;
-            int longitud = origen.longitud;
-            while (longitud > 0) {
-                destino.almacen [indice_destino] = origen.almacen [indice_origen];
-                indice_origen ++;
-                indice_destino ++;
-                longitud --;
-            }
         }
 
 
@@ -313,6 +278,78 @@ namespace com.mazc.Sistema {
         }
 
 
+        internal void PonByte (int posicion, byte numero) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            ValidaRango (posicion, 1);
+            #endif
+            //
+            this.almacen [this.inicio + posicion] = numero;
+        }
+
+
+        internal byte TomaByte (int posicion) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            ValidaRango (posicion, 1);
+            #endif
+            //
+            return this.almacen [this.inicio + posicion];
+        }
+
+
+        internal void PonShort (int posicion, short numero) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            ValidaRango (posicion, 2);
+            #endif
+            //
+            int primero = this.inicio + posicion;
+            this.almacen [primero    ] = (byte) (numero >> 8);
+            this.almacen [primero + 1] = (byte) (numero);
+        }
+
+
+        internal short TomaShort (int posicion) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            ValidaRango (posicion, 2);
+            #endif
+            //
+            int primero = this.inicio + posicion;
+            return (short) (((this.almacen [primero    ] & 0xff) << 8) |
+                            ((this.almacen [primero + 1] & 0xff)     )  );
+        }
+
+
+        internal void PonInt (int posicion, int numero) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            ValidaRango (posicion, 4);
+            #endif
+            //
+            int primero = this.inicio + posicion;
+            this.almacen [primero    ] = (byte) (numero >> 24);
+            this.almacen [primero + 1] = (byte) (numero >> 16);
+            this.almacen [primero + 2] = (byte) (numero >>  8);
+            this.almacen [primero + 3] = (byte) (numero      );
+        }
+
+
+        internal int TomaInt (int posicion) {
+            #if DEBUG
+            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
+            ValidaRango (posicion, 4);
+            #endif
+            //
+            int primero = this.inicio + posicion;
+            return ((this.almacen [primero    ]       ) << 24) |
+                   ((this.almacen [primero + 1] & 0xff) << 16) |
+                   ((this.almacen [primero + 2] & 0xff) <<  8) |
+                   ((this.almacen [primero + 3] & 0xff)      );
+        }
+
+
         internal void PonLong (int posicion, long numero) {
             #if DEBUG
             Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
@@ -346,80 +383,6 @@ namespace com.mazc.Sistema {
                    ((((long) this.almacen [primero + 5]) & 0xff) << 16) |
                    ((((long) this.almacen [primero + 6]) & 0xff) <<  8) |
                    ((((long) this.almacen [primero + 7]) & 0xff)       );
-        }
-
-
-        internal void PonInt (int posicion, int numero) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 4);
-            #endif
-            //
-            int primero = this.inicio + posicion;
-            this.almacen [primero    ] = (byte) (numero >> 24);
-            this.almacen [primero + 1] = (byte) (numero >> 16);
-            this.almacen [primero + 2] = (byte) (numero >>  8);
-            this.almacen [primero + 3] = (byte) (numero      );
-        }
-
-
-        internal int TomaInt (int posicion) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 4);
-            #endif
-            //
-            int primero = this.inicio + posicion;
-            return ((this.almacen [primero    ]       ) << 24) |
-                   ((this.almacen [primero + 1] & 0xff) << 16) |
-                   ((this.almacen [primero + 2] & 0xff) <<  8) |
-                   ((this.almacen [primero + 3] & 0xff)      );
-        }
-
-
-        internal void PonShort (int posicion, short numero) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 2);
-            #endif
-            //
-            int primero = this.inicio + posicion;
-            this.almacen [primero    ] = (byte) (numero >> 8);
-            this.almacen [primero + 1] = (byte) (numero);
-        }
-
-
-        internal short TomaShort (int posicion) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 2);
-            #endif
-            //
-            int primero = this.inicio + posicion;
-            return (short) (((this.almacen [primero    ] & 0xff) << 8) |
-                            ((this.almacen [primero + 1] & 0xff)     )  );
-        }
-
-
-        internal void PonByte (int posicion, byte numero) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 1);
-            #endif
-            //
-            int primero = this.inicio + posicion;
-            this.almacen [primero] = numero;
-        }
-
-
-        internal byte TomaByte (int posicion) {
-            #if DEBUG
-            Depuracion.Valida (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 1);
-            #endif
-            //
-            int primero = this.inicio + posicion;
-            return this.almacen [primero];
         }
 
 

@@ -9,11 +9,12 @@ namespace CreaClavesRSA {
 
 
         static void Main (string [] args) {
-#if DEBUG  
-        Console.WriteLine("DEBUG is defined");  
-#else  
-        Console.WriteLine("DEBUG is not defined");  
-#endif  
+            #if DEBUG  
+            Console.WriteLine("DEBUG is defined");  
+            #else  
+            Console.WriteLine("DEBUG is not defined");  
+            #endif  
+            ContadorCTR.Valida ();
         }
 
 

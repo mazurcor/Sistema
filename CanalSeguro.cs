@@ -40,8 +40,8 @@ namespace com.mazc.Sistema {
         private Seguridad seguridad_servidor;
 
 
-        ContadorCTR contador_CTR_local;
-        ContadorCTR contador_CTR_remoto;
+        private ContadorCTR contador_CTR_local;
+        private ContadorCTR contador_CTR_remoto;
 
         #endregion
 
@@ -66,8 +66,8 @@ namespace com.mazc.Sistema {
             //
             this.seguridad_servidor = seguridad_servidor_;
             //
-            contador_CTR_local .Inicia (0, 0);
-            contador_CTR_remoto.Inicia (0, 0);
+            contador_CTR_local  = new ContadorCTR ();
+            contador_CTR_remoto = new ContadorCTR ();
         }
 
 
@@ -78,8 +78,8 @@ namespace com.mazc.Sistema {
             this.clave_publica.ReservaCopia (clave_publica_);
             protocolo.ReservaCopia (literal_protocolo);
             //
-            contador_CTR_local .Inicia (0, 0);
-            contador_CTR_remoto.Inicia (0, 0);
+            contador_CTR_local  = new ContadorCTR ();
+            contador_CTR_remoto = new ContadorCTR ();
         }
 
 

@@ -417,7 +417,7 @@ namespace com.mazc.Sistema {
             #endif
             //
             PreparaBuzones (9);
-            buzon_paquete [0] = marca_long;
+            buzon_paquete.PonByte (0, marca_long);
             buzon_paquete.PonLong (1, numero);
             EnviaConexion (9);
         }          
@@ -453,7 +453,7 @@ namespace com.mazc.Sistema {
             //
             PreparaBuzones (9);
             RecibeConexion (0, 9);
-            if (buzon_paquete [0] != marca_long) {
+            if (buzon_paquete.TomaByte (0) != marca_long) {
                 throw new ErrorConexion ("Fallo en recepción de entero largo");
             }
             return buzon_paquete.TomaLong (1);
@@ -482,7 +482,7 @@ namespace com.mazc.Sistema {
             #endif
             //
             PreparaBuzones (5);
-            buzon_paquete [0] = marca_int;
+            buzon_paquete.PonByte (0, marca_int);
             buzon_paquete.PonInt (1, numero);
             EnviaConexion (5);
         }          
@@ -518,7 +518,7 @@ namespace com.mazc.Sistema {
             //
             PreparaBuzones (5);
             RecibeConexion (0, 5);
-            if (buzon_paquete [0] != marca_int) {
+            if (buzon_paquete.TomaByte (0) != marca_int) {
                 throw new ErrorConexion ("Fallo en recepción de entero");
             }
             return buzon_paquete.TomaInt (1);
@@ -547,7 +547,7 @@ namespace com.mazc.Sistema {
             #endif
             //
             PreparaBuzones (3);
-            buzon_paquete [0] = marca_short;
+            buzon_paquete.PonByte (0, marca_short);
             buzon_paquete.PonShort (1, numero);
             EnviaConexion (3);
         }          
@@ -583,7 +583,7 @@ namespace com.mazc.Sistema {
             //
             PreparaBuzones (3);
             RecibeConexion (0, 3);
-            if (buzon_paquete [0] != marca_short) {
+            if (buzon_paquete.TomaByte (0) != marca_short) {
                 throw new ErrorConexion ("Fallo en recepción de entero corto");
             }
             return buzon_paquete.TomaShort (1);
@@ -612,7 +612,7 @@ namespace com.mazc.Sistema {
             #endif
             //
             PreparaBuzones (2);        
-            buzon_paquete [0] = marca_byte;
+            buzon_paquete.PonByte (0, marca_byte);
             buzon_paquete.PonByte (1, numero);
             EnviaConexion (2);
         }          
@@ -648,7 +648,7 @@ namespace com.mazc.Sistema {
             //
             PreparaBuzones (2);
             RecibeConexion (0, 2);
-            if (buzon_paquete [0] != marca_byte) {
+            if (buzon_paquete.TomaByte (0) != marca_byte) {
                 throw new ErrorConexion ("Fallo en recepción de byte");
             }
             return buzon_paquete.TomaByte (1);
@@ -682,7 +682,7 @@ namespace com.mazc.Sistema {
             }
             int longitud = cadena.Length * 2;
             PreparaBuzones (5 + longitud);
-            buzon_paquete [0] = marca_string;
+            buzon_paquete.PonByte (0, marca_string);
             buzon_paquete.PonInt (1, longitud);
             buzon_paquete.PonString (5, cadena);
             EnviaConexion (5 + longitud);
@@ -719,7 +719,7 @@ namespace com.mazc.Sistema {
             //
             PreparaBuzones (5);
             RecibeConexion (0, 5);
-            if (buzon_paquete [0] != marca_string) {
+            if (buzon_paquete.TomaByte (0) != marca_string) {
                 throw new ErrorConexion ("Fallo en recepción de cadena");
             }
             int longitud = buzon_paquete.TomaInt (1);
@@ -763,7 +763,7 @@ namespace com.mazc.Sistema {
                 posicion_paquete = cabecera_paquete;
             }
             PreparaBuzones (longitud_paquete + 2);
-            buzon_paquete [posicion_paquete] = marca_bool;
+            buzon_paquete.PonByte (posicion_paquete, marca_bool);
             byte marca = 0;
             if (valor) {
                 marca = 1;
@@ -799,7 +799,7 @@ namespace com.mazc.Sistema {
                 posicion_paquete = cabecera_paquete;
             }
             PreparaBuzones (longitud_paquete + 9);
-            buzon_paquete [posicion_paquete] = marca_long;
+            buzon_paquete.PonByte (posicion_paquete, marca_long);
             buzon_paquete.PonLong (posicion_paquete + 1, numero);
             longitud_paquete += 9;
             posicion_paquete += 9;
@@ -831,7 +831,7 @@ namespace com.mazc.Sistema {
                 posicion_paquete = cabecera_paquete;
             }
             PreparaBuzones (longitud_paquete + 5);
-            buzon_paquete [posicion_paquete] = marca_int;
+            buzon_paquete.PonByte (posicion_paquete, marca_int);
             buzon_paquete.PonInt (posicion_paquete + 1, numero);
             longitud_paquete += 5;
             posicion_paquete += 5;
@@ -867,7 +867,7 @@ namespace com.mazc.Sistema {
             }
             int longitud = cadena.Length * 2;
             PreparaBuzones (longitud_paquete + 5 + longitud);
-            buzon_paquete [posicion_paquete] = marca_string;
+            buzon_paquete.PonByte (posicion_paquete, marca_string);
             buzon_paquete.PonInt (posicion_paquete + 1, longitud);
             longitud_paquete += 5;
             posicion_paquete += 5;
@@ -900,7 +900,7 @@ namespace com.mazc.Sistema {
             Depuracion.Valida (! paquete_salida, "Paquete no preparado.");
             #endif
             //
-            buzon_paquete [0] = marca_paquete;
+            buzon_paquete.PonByte (0, marca_paquete);
             buzon_paquete.PonInt (1, longitud_paquete);
             try {
                 EnviaConexion (longitud_paquete);
@@ -940,7 +940,7 @@ namespace com.mazc.Sistema {
             //
             PreparaBuzones (5);
             RecibeConexion (0, 5);
-            if (buzon_paquete [0] != marca_paquete) {
+            if (buzon_paquete.TomaByte (0) != marca_paquete) {
                 throw new ErrorConexion ("Fallo en paquete recibido");
             }
             longitud_paquete = buzon_paquete.TomaInt (1);
@@ -980,7 +980,7 @@ namespace com.mazc.Sistema {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Paquete recibido incompleto");
             }
-            if (buzon_paquete [posicion_paquete] != marca_bool) {
+            if (buzon_paquete.TomaByte (posicion_paquete) != marca_bool) {
                 paquete_entrada = false;
                 throw new ErrorConexion ("booleano inválido en paquete recibido");
             }
@@ -1019,7 +1019,7 @@ namespace com.mazc.Sistema {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Paquete recibido incompleto");
             }
-            if (buzon_paquete [posicion_paquete] != marca_long) {
+            if (buzon_paquete.TomaByte (posicion_paquete) != marca_long) {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Entero inválido en paquete recibido");
             }
@@ -1058,7 +1058,7 @@ namespace com.mazc.Sistema {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Paquete recibido incompleto");
             }
-            if (buzon_paquete [posicion_paquete] != marca_int) {
+            if (buzon_paquete.TomaByte (posicion_paquete) != marca_int) {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Entero inválido en paquete recibido");
             }
@@ -1097,7 +1097,7 @@ namespace com.mazc.Sistema {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Paquete recibido incompleto");
             }
-            if (buzon_paquete [posicion_paquete] != marca_string) {
+            if (buzon_paquete.TomaByte (posicion_paquete) != marca_string) {
                 paquete_entrada = false;
                 throw new ErrorConexion ("Cadena inválida en paquete recibido");
             }
@@ -1156,7 +1156,7 @@ namespace com.mazc.Sistema {
                 Buzon nuevo = new Buzon ();
                 nuevo.Reserva (longitud);
                 if (paquete_entrada || paquete_salida) {
-                    Buzon.Copia (buzon_mensaje, ref nuevo, buzon_mensaje.Longitud);
+                    Buzon.CopiaDatos (buzon_mensaje, in nuevo, buzon_mensaje.Longitud);
                 }
                 buzon_mensaje.TrasponBuzon (ref nuevo);
                 buzon_mensaje.CreaFragmento (0, longitud, ref buzon_paquete);
