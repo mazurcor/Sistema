@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------------------------
 // archivo:     Sistema/Conexion.cs
-// versión:     18-Oct-2020
+// versión:     22-Oct-2020
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------
@@ -430,12 +430,12 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Valor máximo de los números de mensaje.
         /// </summary>
-        public const int MaximoMensaje = 5;//int.MaxValue;
+        public const int MaximoMensaje = int.MaxValue;
 
         /// <summary>
         /// Valor máximo de los números de bloque.
         /// </summary>
-        public const int MaximoBloque = 5;//int.MaxValue;
+        public const int MaximoBloque = int.MaxValue;
 
 
         #region varibles privadas
