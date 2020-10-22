@@ -51,8 +51,6 @@ namespace com.mazc.Sistema {
     }
 
 
-
-
     public class CalculoHMAC {
   
         
@@ -414,8 +412,8 @@ namespace com.mazc.Sistema {
     /// Participa en la implementación del canal seguro, el cual usa el modo 'CTR'. Esta clase 
     /// genera los bloques de datos, llamados contadores, que se encriptan en el modo CTR.
     /// Un contador se forma a partir de:
-    ///     * Una marca binaria para la serie de mensajes. Los mensajes de la serie son los que se 
-    ///       encriptan con la misma clave de encriptación.
+    ///     * Una número para la serie de mensajes. Los mensajes de la serie se encriptan con la 
+    ///       misma clave de encriptación. Es un número aleatorio de 64 bits.
     ///     * Un número de mensaje dentro de la serie. El número de mensaje recorre los valores: 
     ///       1, ···, MaximoNumero, 0 . Tras MaximoNumero el contador pasa a cero.
     ///     * Un número de bloque dentro del mensaje. El número de bloque recorre los valores: 
@@ -432,12 +430,12 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Valor máximo de los números de mensaje.
         /// </summary>
-        public const int MaximoMensaje = 9;//int.MaxValue;
+        public const int MaximoMensaje = 5;//int.MaxValue;
 
         /// <summary>
         /// Valor máximo de los números de bloque.
         /// </summary>
-        public const int MaximoBloque = 9;//int.MaxValue;
+        public const int MaximoBloque = 5;//int.MaxValue;
 
 
         #region varibles privadas
@@ -470,71 +468,32 @@ namespace com.mazc.Sistema {
         /// Constructor.
         /// </summary>
         /// <remarks>
-        /// El número de mensaje y el número bloque serán cero.
-        /// El contador no puede ser leido.
+        /// Es necesario iniciar la serie con 'IniciaSerie'.
         /// </remarks>
         public ContadorCTR () {
+            serie_iniciada = false;
             buzon_contador = new byte [BytesContador];
         }
 
 
-        #region métodos privados
-
-
-        // Indica si la marca de serie es nueva, comparandola con la anterior.
-        private bool SerieNueva (long serie) {
-            if (! serie_iniciada) {
-                return true;
-            }
-            return numero_serie != serie;
-        }
-
-
-        // Pone en el buzon del contador la marca de serie actual.
-        private void PonSerieBuzon () {
-            buzon_contador [inicio_serie    ] = (byte) (numero_serie >> 56);
-            buzon_contador [inicio_serie + 1] = (byte) (numero_serie >> 48);
-            buzon_contador [inicio_serie + 2] = (byte) (numero_serie >> 40);
-            buzon_contador [inicio_serie + 3] = (byte) (numero_serie >> 32);
-            buzon_contador [inicio_serie + 4] = (byte) (numero_serie >> 24);
-            buzon_contador [inicio_serie + 5] = (byte) (numero_serie >> 16);
-            buzon_contador [inicio_serie + 6] = (byte) (numero_serie >>  8);
-            buzon_contador [inicio_serie + 7] = (byte) (numero_serie      );
-        }
-
-
-        // Pone en el buzón del contador el número indicado en la posición indicada.
-        private void PonNumeroBuzon (int numero, int inicio) {
-            buzon_contador [inicio    ] = (byte) (numero >> 24);
-            buzon_contador [inicio + 1] = (byte) (numero >> 16);
-            buzon_contador [inicio + 2] = (byte) (numero >>  8);
-            buzon_contador [inicio + 3] = (byte) (numero      );
-        }
-
-
-        #endregion
-
-
         /// <summary>
-        /// Establece una nueva serie para ser usada en los contadores. La serie se asocia a una 
-        /// clave de encriptación nueva.
+        /// Establece la primera serie a ser usada en los contadores. La serie se asocia a una clave 
+        /// de encriptación nueva.
         /// </summary>
         /// <remarks>
-        /// Los contadores de la serie usarán la marca de serie indicada. El primer contador de 
-        /// La serie usará el número de mensaje 1 y el número de bloque 0.
+        /// Establece el número de serie 0, el número de mensaje 0 y el número de bloque 0. Se usa
+        /// solo la primera vez que se cambia la serie, para las siguientes se usa 'CambiaSerie'.
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
         /// <param name="serie">marca de la nueva serie, </param>
-        public void IniciaSerie (long serie, int mensaje) {
-            Depuracion.Asevera (! serie_iniciada || contador_leido);
-            // valida que la marca de serie previa es distinta de la indicada
-            Depuracion.Asevera (SerieNueva (serie));
+        public void IniciaSerie () {
+            Depuracion.Asevera (! serie_iniciada);
             //
-            numero_serie   = serie;
-            numero_mensaje = mensaje;
+            numero_serie   = 0;
+            numero_mensaje = 0;
             numero_bloque  = 0;
             //
-            PonSerieBuzon  ();
+            PonNumeroBuzon (numero_serie,   inicio_serie);
             PonNumeroBuzon (numero_mensaje, inicio_mensaje);
             PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
@@ -544,16 +503,75 @@ namespace com.mazc.Sistema {
 
 
         /// <summary>
-        /// Incrementa el número de mensaje usado en los contadores. Se incremente cuando hay un 
+        /// Establece una nueva serie para ser usada en los contadores. La serie se asocia a una 
+        /// clave de encriptación nueva.
+        /// </summary>
+        /// <remarks>
+        /// Los contadores de la serie usarán el número de serie indicado. El primer contador de 
+        /// la serie usará el número de mensaje 1 y el número de bloque 0. 
+        /// Solo se puede usar este método cuando el número de mensaje es 0.
+        /// El número de serie indicado no puede ser 0 y debe ser distinto al de la serie anterior.
+        /// El contador queda preparado para ser leido (con 'AsignaContador').
+        /// </remarks>
+        /// <param name="serie">marca de la nueva serie, </param>
+        public void CambiaSerie (long serie) {
+            Depuracion.Asevera (serie_iniciada);
+            Depuracion.Asevera (contador_leido);
+            Depuracion.Asevera (numero_mensaje == 0);
+            Depuracion.Asevera (serie != 0);
+            Depuracion.Asevera (numero_serie != serie);
+            //
+            numero_serie   = serie;
+            numero_mensaje = 1;
+            numero_bloque  = 0;
+            //
+            PonNumeroBuzon (numero_serie,   inicio_serie);
+            PonNumeroBuzon (numero_mensaje, inicio_mensaje);
+            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //
+            serie_iniciada = true;
+            contador_leido = false;
+        }
+
+
+        /// <summary>
+        /// Pone a cero el número de mensaje usado en los contadores. Se pone a cero para cambiar la
+        /// clave de encriptación y la serie.
+        /// </summary>
+        /// <remarks>
+        /// El número de serie y el número de bloque pasan a ser 0.
+        /// Solo se puede usar este método cuando el número de serie y el número de mensaje no es 0.
+        /// El contador queda preparado para ser leido (con 'AsignaContador').
+        /// </remarks>
+        public void AnulaMensaje () {
+            Depuracion.Asevera (serie_iniciada);
+            Depuracion.Asevera (contador_leido);
+            Depuracion.Asevera (numero_serie != 0);
+            Depuracion.Asevera (numero_mensaje > 0);
+            //
+            numero_mensaje = 0;
+            numero_bloque  = 0;
+            //
+            PonNumeroBuzon (numero_mensaje, inicio_mensaje);
+            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //
+            contador_leido = false;
+        }
+
+
+        /// <summary>
+        /// Incrementa el número de mensaje usado en los contadores. Se incrementa cuando hay un 
         /// mensaje nuevo.
         /// </summary>
         /// <remarks>
-        /// El número de bloque pasa a cero.
+        /// El número de bloque pasa a 0.
+        /// Solo se puede usar este método cuando el número de serie y el número de mensaje no es 0.
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
         public void IncrementaMensaje () {
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (contador_leido);
+            Depuracion.Asevera (numero_serie != 0);
             Depuracion.Asevera (numero_mensaje > 0);
             //
             if (numero_mensaje < MaximoMensaje) {
@@ -591,6 +609,16 @@ namespace com.mazc.Sistema {
 
 
         /// <summary>
+        /// Número de serie del contador. Es el asignado en 'IniciaSerie'.
+        /// </summary>
+        public long NumeroSerie {
+            get {
+                return numero_serie;
+            }
+        }
+
+
+        /// <summary>
         /// Número del mensaje del contador. Recorre los valores:  1, ···, MaximoNumero, 0 
         /// </summary>
         public int NumeroMensaje {
@@ -606,16 +634,6 @@ namespace com.mazc.Sistema {
         public int NumeroBloque {
             get {
                 return numero_bloque;
-            }
-        }
-
-
-        /// <summary>
-        /// Número de serie del contador. Es el asignado en 'IniciaSerie'.
-        /// </summary>
-        public long NumeroSerie {
-            get {
-                return numero_serie;
             }
         }
 
@@ -644,50 +662,150 @@ namespace com.mazc.Sistema {
         #region métodos privados
 
 
-        private static void Valida () {
-            ContadorCTR CTR = new ContadorCTR ();
-            long serie1 = 0x0F1F2F3F4F5F6F7F;
-            long serie2 = 0x7E8E9EAEBECEDEEE;
-            //
-            CTR.IniciaSerie (serie1, 0);
+        // Pone en el buzon del contador la marca de serie actual.
+        private void PonNumeroBuzon (long numero, int inicio) {
+            buzon_contador [inicio    ] = (byte) (numero_serie >> 56);
+            buzon_contador [inicio + 1] = (byte) (numero_serie >> 48);
+            buzon_contador [inicio + 2] = (byte) (numero_serie >> 40);
+            buzon_contador [inicio + 3] = (byte) (numero_serie >> 32);
+            buzon_contador [inicio + 4] = (byte) (numero_serie >> 24);
+            buzon_contador [inicio + 5] = (byte) (numero_serie >> 16);
+            buzon_contador [inicio + 6] = (byte) (numero_serie >>  8);
+            buzon_contador [inicio + 7] = (byte) (numero_serie      );
+        }
+
+
+        // Pone en el buzón del contador el número indicado en la posición indicada.
+        private void PonNumeroBuzon (int numero, int inicio) {
+            buzon_contador [inicio    ] = (byte) (numero >> 24);
+            buzon_contador [inicio + 1] = (byte) (numero >> 16);
+            buzon_contador [inicio + 2] = (byte) (numero >>  8);
+            buzon_contador [inicio + 3] = (byte) (numero      );
+        }
+
+
+        #endregion
+
+
+        #region métodos privados
+
+
+        /*
+
+        las llamadas a los métodos solo pueden producirse en cierto orden:
+
+            método                  serie     mensaje     bloques
+            --------------------------------------------------------------
+            IniciaSerie:                      
+                                    0         0           0, 1, 2, ···
+            CambiaSerie:                                           
+                                    b1        1           0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b1        2           0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b1        3           0, 1, 2, ···
+
+                · · · · · · · · · ·                                
+        
+            IncrementaMensaje:                                     
+                                    b1        36          0, 1, 2, ···
+            AnulaMensaje:                                          
+                                    b1        0           0, 1, 2, ···
+            CambiaSerie:                                           
+                                    b2        1           0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b2        2           0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b2        3           0, 1, 2, ···
+
+                · · · · · · · · · ·                                
+
+            IncrementaMensaje:                                     
+                                    b2        máximo      0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b2        0           0, 1, 2, ···
+            CambiaSerie:                                           
+                                    b3        1           0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b3        2           0, 1, 2, ···
+            IncrementaMensaje:                                     
+                                    b3        3           0, 1, 2, ···
+
+                · · · · · · · · · · 
+
+        */
+
+
+        public static void Valida () {
+            ContadorCTR CTR = new ContadorCTR (); 
+            ValidaIniciaSerie       (CTR);
+            ValidaCambiaSerie       (CTR, 0x1F2F3F4F5F6F7F8F);
+            ValidaIncrementeMensaje (CTR);
+            ValidaIncrementeMensaje (CTR);
+            ValidaAnulaMensaje      (CTR);
+            ValidaCambiaSerie       (CTR, 0x7E8E9EAEBECEDEEE);
+            ValidaIncrementeMensaje (CTR);
+            ValidaIncrementeMensaje (CTR);
+            ValidaIncrementeMensaje (CTR);
+            ValidaIncrementeMensaje (CTR);
+            ValidaIncrementeMensaje (CTR);
+            ValidaCambiaSerie       (CTR, 0x1122334455667788);
+            ValidaIncrementeMensaje (CTR);
+            ValidaIncrementeMensaje (CTR);
+            Console.ReadLine ();
+        }
+
+
+        private static void ValidaIniciaSerie (ContadorCTR CTR) {
+            Console.WriteLine ();
+            Console.WriteLine ("mensaje:");
+            CTR.IniciaSerie ();
             Imprime (CTR);
-            for (int i = 1; i < 10; ++ i) {
+            for (int i = 1; i < 4; ++ i) {
                 CTR.IncrementaBloque ();
                 Imprime (CTR);
             }
+        }
 
-            CTR.IniciaSerie (serie2, 0);
+
+        private static void ValidaCambiaSerie (ContadorCTR CTR, long serie) {
+            Console.WriteLine ();
+            Console.WriteLine ("mensaje:");
+            CTR.CambiaSerie (serie);
             Imprime (CTR);
-            for (int i = 1; i < 10; ++ i) {
+            for (int i = 1; i < 4; ++ i) {
                 CTR.IncrementaBloque ();
                 Imprime (CTR);
             }
+        }
 
-            CTR.IncrementaBloque ();
-            Imprime (CTR);
 
-            CTR.IncrementaBloque ();
-            Imprime (CTR);
-
-            CTR.IncrementaBloque ();
-            Imprime (CTR);
-
+        private static void ValidaIncrementeMensaje (ContadorCTR CTR) {
+            Console.WriteLine ();
+            Console.WriteLine ("mensaje:");
             CTR.IncrementaMensaje ();
             Imprime (CTR);
+            for (int i = 1; i < 4; ++ i) {
+                CTR.IncrementaBloque ();
+                Imprime (CTR);
+            }
+        }
 
-            CTR.IncrementaBloque ();
+
+        private static void ValidaAnulaMensaje (ContadorCTR CTR) {
+            Console.WriteLine ();
+            Console.WriteLine ("mensaje:");
+            CTR.AnulaMensaje ();
             Imprime (CTR);
-
-            CTR.IncrementaBloque ();
-            Imprime (CTR);
-
-            CTR.IncrementaBloque ();
-            Imprime (CTR);
-
+            for (int i = 1; i < 4; ++ i) {
+                CTR.IncrementaBloque ();
+                Imprime (CTR);
+            }
         }
 
 
         private static void Imprime (ContadorCTR CTR) {
+            Console.Write ("    ");
             byte [] contador = new byte [ContadorCTR.BytesContador];
             CTR.AsignaContador (contador, 0);
             for (int i = 0; i < ContadorCTR.BytesContador; ++ i) {
