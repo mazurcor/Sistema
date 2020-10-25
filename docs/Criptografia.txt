@@ -296,7 +296,10 @@
 	RSA es un algoritmo de encriptación de clave simétrica. También se usa en firmas digitales.
 	
 	Una de las características de RSA es la longitud de la clave. RSA se considera seguro a partir 
-	de 2048 bits.
+	de 2048 bits. 
+	
+	El mensaje encriptado tiene la misma longitud que la clave. Si la clave es de 2048 bits, el mensaje
+	encriptado es de 256 bytes.
 
 	RSA es poco eficiente, se usa solamente para establecer los parámetros del sistema, en 
 	particular las claves simétricas y de autenticación.

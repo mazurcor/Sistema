@@ -14,7 +14,6 @@ namespace CreaClavesRSA {
             #else  
             Console.WriteLine("DEBUG is not defined");  
             #endif  
-            ContadorCTR.Valida ();
         }
 
 

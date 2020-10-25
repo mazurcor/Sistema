@@ -4,3 +4,250 @@
 	============
 
 
+		c := E(Ke,m)	
+		m := D(Ke,c)
+			
+			m es el mensaje claro
+			c es el mensaje cifrado
+			E es un procedimiento de encriptación
+			D es el procedimiento de desencriptación.
+			Ke es la clave de encriptación.
+
+		c := E(Pb,m)
+		m := D(Sb,c)
+			m es el mensaje a enviar
+			c es el mensaje 'm' cifrado
+			E es un procedimiento de encriptación
+			Pb es la clave de encriptación.
+			D es el procedimiento de desencriptación
+			Sb es la clave de desencriptación.
+
+		a := h(Ka,m)
+			m es el mensaje a autenticar
+			a es el código de autenticación
+			h es la función de cálculo
+			Ka el la clave de autenticación
+
+			'|' es la concatenación de cadenas de bits
+			'⊕' es la operación 'xor'
+			msb es la función que extrae los bits mas significativos
+
+
+
+
+
+
+
+
+
+
+
+funciones   descripción
+----------  --------------------------------------------------------------------
+
+|           concatenacion de secuencias de bytes
+#           longitud en bytes de una secuencia
+XOR         disyuncion exclusiva
+FIRST-'d'   primeros 'd' bytes de una secuencia
+RNG         algoritmo de generacion de números aleatorios
+RNG-'d'     generacion de número aleatorio de 'd' Bytes
+RSA         algoritmo de encriptación asimetrica (2048 bits)
+kV          clave de encriptacion privada, de longitud no especificada
+kB          clave de encriptacion publica, de longitud no especificada  
+E-RSA-kB    encriptacion con RSA y kB, el resultado es de 256 Bytes, el argumento de 126 Bytes máximo 
+D-RSA-kV    desencriptacion con RSA y kV, longitudes a la inversa
+AES         algoritmo de encriptación simetrica
+kS          clave de encriptacion simetrica, de 32 Bytes (hay dos, una de cliente y otra de servidor)
+E-AES-kS    encriptacion con AES y kS, resultado y argumento en bloques de 16 Bytes
+D-AES-kS    desencriptacion con AES y kS, idem
+HMAC        algoritmo de autenticación
+kA          clave de autenticación, de longitud variable, se usa con 32 Bytes (también hay dos)
+HMAC-kA     autenticación con HMAC y kA, resultado de 32 Bytes, argumento de longitud variable
+S           valor secreto usado para derivar las claves de encriptación y autenticación, de 64 Bytes
+
+
+variables   descripción
+---------   --------------------------------------------------------------------------
+
+b           billete de los mensajes (es 0 en el primer mensaje), de 4 Bytes    
+i           índice del mensaje, de 4 Bytes
+p           parte del protocolo del primer mensaje, su valor es 'mazc 1.0', de 8 Bytes 
+lm          longitud total del mensaje, de 4 Bytes
+x           mensaje de claves, en texto claro
+xe          mensaje de claves encriptado
+t           mensaje en texto claro, es secuencia de bytes, de longitud variable (es distinto de x)
+n           número de bloques de 16 Bytes del mensaje t (el último posiblemente incompleto)
+j           índice del bloque de t, de 4 Bytes
+a           autenticación del mensaje, de 32 Bytes 
+k           flujo de claves, sin limite teorico
+k'          flujo de claves de longitud limitada al texto a encriptar
+ta          texto claro con autenticación
+te          texto autentificado y encriptado
+me          mensaje a enviar
+
+
+
+PROCESO
+-------
+
+ A) Primer mensaje de tranporte de claves del cliente
+
+     1) el valor de i debe ser 0, el valor de b debe ser 0
+
+     2) se calcula la longitud total del mensaje a enviar
+
+            lm = #b + #i + #lm + #xe = 4 + 4 + 4 + 256 = 268
+
+     3) se crea un valor secreto usando un algoritmo de generación de numeros aleatorios
+        
+            S = RNG-64 ( )
+
+     4) a partir de este valor secreto se derivan 4 claves:
+
+        a) clave de encriptación del cliente:   kS'
+        b) clave de autenticación del cliente:  kA'
+        c) clave de encriptación del servicio:  kS"
+        d) clave de autenticación del servicio: kA"
+
+     5) se crea el texto claro concatenando el valor secreto a la parte del protocolo
+
+            x = p | S
+
+     6) se encripta el texto claro
+
+            xe = E-RSA-kB ( x )
+
+     5) se forma en mensaje a enviar
+
+            me =  b | i | lm | xe
+
+
+ B) Mensaje general del cliente o del servicio
+
+     1) para cualquier valor de i y de b
+
+     2) para cualquier valor de t
+
+     3) se toman las claves de encriptación y autenticación para el cliente o el servidor
+
+     4) se calcula la longitud total del mensaje a enviar
+
+            lm = #b + #i + #lm + #t + #a = 4 + 4 + 4 + #t + 32 = #t + 44
+
+     5) se calcula la autenticación
+
+            a = HMAC-kA ( b | i | lm | t )
+
+     6) se concatena la autenticación y el texto claro
+
+            ta = a | t
+
+     7) se calcula el flujo de claves 
+
+            k = k1 | ··· | kj | ···
+
+        siendo:
+
+            kj = AES-kS ( j | i | 0 | b )           0 es de 4 Bytes, kj de 16 Bytes, 
+            
+     8) se descompone le mensaje autentificado en bloques se 16 Bytes
+
+            ta = ta1 | ··· | taj | ··· | tan        donde:  #ta1 = 16 , ... , #ta(n-1) = 16 , 1 <= #tan <= 16
+
+     9) se restringe el flujo de claves a la longitud del mensaje autentificado
+
+            k' = FIST-#ta ( k )
+
+    10) se encripta el mensaje autentificado
+
+            te = ta XOR k'
+
+    11) se forma en mensaje a enviar
+
+            me = b | i | lm | te
+
+
+ C) Mensaje de respuesta del servidor al primer mensaje de tranporte de claves del cliente
+
+     1) el valor de i debe ser 0
+
+     2) el valor de b debe ser 0
+
+     3) se calcula un nuevo valor de b, evitando que sea 0
+
+            b' = RNG-4 ( )
+
+     4) se usa como texto claro la parte del protocolo concatenada con b'
+
+            t = p | b'
+
+     5) se procesa como un mensaje general, según se especifica en (B)
+
+
+ D) Mensaje de petición de cambio de clave, del cliente o del servivio
+
+     1) el valor de i debe ser 0
+
+     2) el valor de b no puede ser 0
+
+     3) se crea un nuevo valor secreto usando un algoritmo de generación de numeros aleatorios
+        
+            S' = RNG-64 ( )
+
+     4) a partir de este valor secreto se derivan 4 claves:
+
+        a) clave de encriptación del cliente:   kS'
+        b) clave de autenticación del cliente:  kA'
+        c) clave de encriptación del servicio:  kS"
+        d) clave de autenticación del servicio: kA"
+
+     5) se crea el texto claro usando el nuevo valor secreto
+
+            x = S'
+
+     6) se procesa como un mensaje general, según se especifica en (B), sin usa la clave simétrica nueva
+
+
+ E) Mensaje de respuesta de cambio de clave, del cliente o del servicio
+
+     1) el valor de i debe ser 0
+
+     2) el valor de b no puede ser 0
+
+     3) se calcula un nuevo valor de b, evitando que sea 0 o que sea el valor actual
+
+            b' = RNG-4 ( )
+
+     4) se crea el texto claro usando el nuevo valor de b
+
+            x = b'
+
+     5) se procesa como un mensaje general, según se especifica en (B), sin usar la clave nueva ni el nuevo valor de b
+
+
+
+COMUNICACION
+------------
+
+Mensaje     Servidor                                   Parámetros                Cliente                                     Parámetros        Explicación   
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+tipo (A)                                               kV     -  -      <-----     0 | 0 | l | RSA ( S1 | 'mazc 1.0' )       kB     -  -       previo a la primera petición, establecimiento de clave
+tipo (C)     0 | 0 | l | AES ( b1 | 'mazc 1.0' | a )   kS1"   0  0      ----->                                               kS1"   0  0       respuesta al previo, billete nuevo
+tipo (B)                                               kS1'  b1  1      <-----    b1 | 1 | l | AES ( t | a )                 kS1'  b1  1       primera petición
+tipo (B)    b1 | 1 | l | AES ( t | a )                 kS1"  b1  1      ----->                                               kS1"  b1  1       primera respuesta
+tipo (B)                                               kS1'  b1  2      <-----    b1 | 2 | l | AES ( t | a )                 kS1'  b1  2       segunda petición
+tipo (B)    b1 | 2 | l | AES ( t | a )                 kS1"  b1  2      ----->                                               kS1"  b1  2       dos respuestas sucesivas
+tipo (B)    b1 | 3 | l | AES ( t | a )                 kS1"  b1  3      ----->                                               kS1"  b1  3       idem
+  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  mas mensajes
+tipo (B)    b1 | n | l | AES ( t | a )                 kS1"  b1  n      ----->                                               kS1"  b1  n       otra respuesta, última con esa clave
+tipo (D)    b1 | 0 | l | AES ( S2 | a )                kS1"  b1  0      ----->                                               kS1"  b1  0       previo a la siguiente respuesta, cambio de clave 
+tipo (E)                                               kS1'  b1  0      <-----    b1 | 0 | l | AES ( b2 | a )                kS1'  b1  0       respuesta al cambio de clave, billete nuevo
+tipo (B)    b2 | 1 | l | AES ( t | a )                 kS2"  b2  1      ----->                                               kS2"  b2  1       siguiente respuesta, con clave nueva
+tipo (B)                                               kS2'  b2  1      <-----    b2 | 1 | l | AES ( t | a )                 kS2'  b2  1       otra petición, sin respuesta
+tipo (B)                                               kS2'  b2  2      <-----    b2 | 2 | l | AES ( t | a )                 kS2'  b2  2       otra petición
+  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  mas mensajes
+tipo (B)                                               kS2'  b2  n      <-----    b2 | n | l | AES ( t | a )                 kS2'  b2  n       otra petición, última con esa clave
+tipo (D)                                               kS2'  b2  0      <-----    b2 | 0 | l | AES ( S3 | a )                kS2'  b2  0       previo a la siguiente petición, cambio de clave
+tipo (E)    b2 | 0 | l | AES ( b3 | a )                kS2"  b2  0      ----->                                               kS2"  b2  0       respuesta al cambio de clave, billete nuevo 
+tipo (B)                                               kS3'  b3  1      <-----    b3 | 1 | l | AES ( t | a )                 kS3'  b3  1       siguiente petición, con clave nueva
+tipo (B)    b3 | 1 | l | AES ( t | a )                 kS3"  b3  1      ----->                                               kS3"  b3  1       respuesta 

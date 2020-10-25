@@ -1,13 +1,12 @@
 ﻿//------------------------------------------------------------------------------
-// archivo:     Sistema/Conexion.cs
-// versión:     22-Oct-2020
+// archivo:     Sistema/Criptografo.cs
+// versión:     25-Oct-2020
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------
  
 
 using System;
-using System.Linq.Expressions;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -15,7 +14,7 @@ using System.Text;
 namespace com.mazc.Sistema {
 
 
-    public class Aleatorio {
+    internal sealed class Aleatorio {
 
 
         #region variables privadas
@@ -25,14 +24,16 @@ namespace com.mazc.Sistema {
         #endregion
 
 
-        public void Inicia () {
+        internal void Inicia () {
+            #if DEBUG
             Depuracion.Asevera (algoritmo == null);
+            #endif
             //
             algoritmo = new RNGCryptoServiceProvider ();
         }
 
 
-        public void Termina () {
+        internal void Termina () {
             if (algoritmo == null) {
                 return;
             }
@@ -41,22 +42,26 @@ namespace com.mazc.Sistema {
         }
 
 
-        public void Genera (byte [] data) {
+        internal void Genera (Buzon data) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo != null);
+            Depuracion.Asevera (data != null);
+            Depuracion.Asevera (data.Longitud > 0);
+            #endif
             //
-            algoritmo.GetBytes (data);
+            algoritmo.GetBytes (data.Almacen);
         }
 
 
     }
 
 
-    public class CalculoHMAC {
+    internal sealed class CalculoHMAC {
   
         
         /// longitud del valor de resumen (hash) de los datos 
-        public const int BitsValor  = 256;
-        public const int BytesValor =  32;
+        internal const int BitsValor  = 256;
+        internal const int BytesValor =  32;
 
 
         #region variables privadas
@@ -68,20 +73,24 @@ namespace com.mazc.Sistema {
 
         // El tamaño recomendado de 'clave_SHA' es 64 bytes. Si es mayor, el algoritmo hace un hash 
         // (usando SHA-256) y si es menor, lo completa a 64 bytes.
-        public void Inicia (byte [] clave_SHA) {
+        internal void Inicia (Buzon clave_SHA) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo == null);
             Depuracion.Asevera (clave_SHA != null);
-            Depuracion.Asevera (clave_SHA.Length > 0);
+            Depuracion.Asevera (clave_SHA.Longitud == 64);
+            #endif
             //
-            algoritmo = new HMACSHA256 (clave_SHA);
+            algoritmo = new HMACSHA256 (clave_SHA.Almacen);
             //
+            #if DEBUG
             Depuracion.Asevera (algoritmo.CanReuseTransform );
             Depuracion.Asevera (algoritmo.CanTransformMultipleBlocks); 	
             Depuracion.Asevera (algoritmo.HashSize == BitsValor);
+            #endif            
         }
 
 
-        public void Termina () {
+        internal void Termina () {
             if (algoritmo == null) {
                 return;
             }
@@ -90,15 +99,28 @@ namespace com.mazc.Sistema {
         }
 
 
-        public void Calcula (byte [] mensaje, byte [] valor_HMAC) {
+        internal void Calcula (Buzon mensaje, Buzon valor_HMAC) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo != null);
-            Depuracion.Asevera (valor_HMAC.Length == 32);
+            Depuracion.Asevera (mensaje != null);
+            Depuracion.Asevera (mensaje.Longitud > 0);
+            Depuracion.Asevera (valor_HMAC != null);
+            if (valor_HMAC.Longitud > 0) {
+                Depuracion.Asevera (valor_HMAC.Longitud == BytesValor);
+            }
+            #endif
             //
-            byte [] retorno = algoritmo.ComputeHash (mensaje);
+            byte [] retorno = algoritmo.ComputeHash (mensaje.Almacen);
             //
-            Depuracion.Asevera (retorno.Length == 32);
+            #if DEBUG
+            Depuracion.Asevera (retorno.Length == BytesValor);
+            #endif
             //
-            Buffer.BlockCopy (retorno, 0, valor_HMAC, 0, valor_HMAC.Length);
+            if (valor_HMAC.Longitud == 0) {
+                valor_HMAC.ReservaMueve (retorno);
+            } else {
+                Buffer.BlockCopy (retorno, 0, valor_HMAC.Almacen, valor_HMAC.Inicio, BytesValor);
+            }
         }
 
 
@@ -114,26 +136,26 @@ namespace com.mazc.Sistema {
     /// El canal seguro usa el modo 'CTR'. En consecuencia, solo es necesario en cifrado de los 
     /// datos, y se hace en modo 'ECB'.
     /// </remarks>
-    public class CifradoAES {
+    internal sealed class CifradoAES {
     
 
         /// <summary>
         /// Tamaño de clave de encriptación, en bits.
         /// </summary>
-        public const int BitsClave   = 256;
+        internal const int BitsClave   = 256;
         /// <summary>
         /// Tamaño de clave de encriptación, en bytes.
         /// </summary>
-        public const int BytesClave  =  32;
+        internal const int BytesClave  =  32;
 
         /// <summary>
         /// Tamaño de los bloques de datos a encriptar, en bits.
         /// </summary>
-        public const int BitsBloque  = 128;
+        internal const int BitsBloque  = 128;
         /// <summary>
         /// Tamaño de los bloques de datos a encriptar, en bytes.
         /// </summary>
-        public const int BytesBloque =  16;
+        internal const int BytesBloque =  16;
     
 
         # region variables privadas
@@ -156,16 +178,18 @@ namespace com.mazc.Sistema {
         /// 'finally').
         /// </remarks>
         /// <param name="clave_AES">Clave de encriptación, de longitud 'BytesClave'.</param>
-        void Inicia (byte [] clave_AES) {
+        internal void Inicia (Buzon clave_AES) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo == null);
             Depuracion.Asevera (clave_AES != null);
-            Depuracion.Asevera (clave_AES.Length == BytesClave);
+            Depuracion.Asevera (clave_AES.Longitud == BytesClave);
+            #endif
             //
             algoritmo = Aes.Create ();
             // el canal seguro usa el modo 'CTR', se usa AES en modo ECB y sin 'padding'
             algoritmo.Mode    = CipherMode.ECB;
             algoritmo.Padding = PaddingMode.None;
-            algoritmo.Key     = clave_AES;
+            algoritmo.Key = clave_AES.Almacen;
             encriptador = algoritmo.CreateEncryptor ();
             //
             /* es innecesario:
@@ -182,7 +206,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Libera los recursos usados durante la encriptación. Complementa la llamada a 'Inicia'.
         /// </summary>
-        void Termina () {
+        internal void Termina () {
             if (encriptador != null) {
                 encriptador.Dispose ();
                 encriptador = null;
@@ -200,17 +224,22 @@ namespace com.mazc.Sistema {
         /// </summary>
         /// <param name="buzon">uno o más bloques de datos, que se cambian por los bloques 
         /// encriptados; la longitud debe ser múltiplo de 'BytesBloque'</param>
-        void Cifra (byte [] buzon) {
+        internal void Cifra (Buzon buzon) {
+            #if DEBUG
             Depuracion.Asevera (encriptador != null);
             Depuracion.Asevera (buzon != null);
-            Depuracion.Asevera (buzon.Length > 0);
-            Depuracion.Asevera (buzon.Length % BytesBloque == 0);
+            Depuracion.Asevera (buzon.Longitud > 0);
+            Depuracion.Asevera (buzon.Longitud % BytesBloque == 0);
+            #endif
             //
             // encripta todos los bloques, deja el resultado 'in situ'
-            int respuesta = encriptador.TransformBlock (buzon, 0, buzon.Length, buzon, 0);
+            int respuesta = encriptador.TransformBlock (buzon.Almacen, buzon.Inicio, buzon.Longitud, buzon.Almacen, buzon.Inicio);
+            //
+            #if DEBUG
             // en otros nodos de operación es posible que queden bloques pendientes de hacer, en 
             // este modo no es posible:
-            Depuracion.Asevera (respuesta == buzon.Length);
+            Depuracion.Asevera (respuesta == buzon.Longitud);
+            #endif
             //
             // no encripta nada, pero es necesario para hacer un 'Reset' del encriptador, véase en:
             // https://referencesource.microsoft.com/#system.core/System/Security/Cryptography/CapiSymmetricAlgorithm.cs
@@ -232,39 +261,44 @@ namespace com.mazc.Sistema {
             //
             //      F.1.5 ECB-AES256.Encrypt
             //
-            byte [] Key = { 
+            Buzon Key = new Buzon ();
+            Key.ReservaMueve (new byte [] { 
                     0x60,0x3d,0xeb,0x10,0x15,0xca,0x71,0xbe,0x2b,0x73,0xae,0xf0,0x85,0x7d,0x77,0x81,
-                    0x1f,0x35,0x2c,0x07,0x3b,0x61,0x08,0xd7,0x2d,0x98,0x10,0xa3,0x09,0x14,0xdf,0xf4  };
-            byte [] Plaintext = {          
+                    0x1f,0x35,0x2c,0x07,0x3b,0x61,0x08,0xd7,0x2d,0x98,0x10,0xa3,0x09,0x14,0xdf,0xf4  });
+            Buzon Plaintext = new Buzon ();
+            Plaintext.ReservaMueve (new byte [] {          
                     0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a,
                     0xae,0x2d,0x8a,0x57,0x1e,0x03,0xac,0x9c,0x9e,0xb7,0x6f,0xac,0x45,0xaf,0x8e,0x51,
                     0x30,0xc8,0x1c,0x46,0xa3,0x5c,0xe4,0x11,0xe5,0xfb,0xc1,0x19,0x1a,0x0a,0x52,0xef,
-                    0xf6,0x9f,0x24,0x45,0xdf,0x4f,0x9b,0x17,0xad,0x2b,0x41,0x7b,0xe6,0x6c,0x37,0x10  };
-            byte [] Ciphertext = {
+                    0xf6,0x9f,0x24,0x45,0xdf,0x4f,0x9b,0x17,0xad,0x2b,0x41,0x7b,0xe6,0x6c,0x37,0x10  });
+            Buzon Ciphertext = new Buzon ();
+            Ciphertext.ReservaMueve (new byte [] {
                     0xf3,0xee,0xd1,0xbd,0xb5,0xd2,0xa0,0x3c,0x06,0x4b,0x5a,0x7e,0x3d,0xb1,0x81,0xf8,
                     0x59,0x1c,0xcb,0x10,0xd4,0x10,0xed,0x26,0xdc,0x5b,0xa7,0x4a,0x31,0x36,0x28,0x70,
                     0xb6,0xed,0x21,0xb9,0x9c,0xa6,0xf4,0xf9,0xf1,0x53,0xe7,0xb1,0xbe,0xaf,0xed,0x1d,
-                    0x23,0x30,0x4b,0x7a,0x39,0xf9,0xf3,0xff,0x06,0x7d,0x8d,0x8f,0x9e,0x24,0xec,0xc7  }; 
+                    0x23,0x30,0x4b,0x7a,0x39,0xf9,0xf3,0xff,0x06,0x7d,0x8d,0x8f,0x9e,0x24,0xec,0xc7  }); 
             //
             CifradoAES aes = new CifradoAES ();
             try {
                 aes.Inicia (Key);
                 //
-                byte [] datos = new byte [Plaintext.Length];
+                Buzon datos = new Buzon ();
+                datos.Reserva (Plaintext.Longitud);
+                Buzon.CopiaDatos (Plaintext, datos, Plaintext.Longitud);
                 //
-                Buffer.BlockCopy (Plaintext, 0, datos, 0, Plaintext.Length);
                 aes.Cifra (datos);
-                for (int i = 0; i < datos.Length; ++ i) {
-                    if (datos [i] != Ciphertext [i]) {
+                for (int i = 0; i < datos.Longitud; ++ i) {
+                    if (datos.TomaByte (i) != Ciphertext.TomaByte (i)) {
                         throw new Exception ("Validación fallida.");
                     }
                 }
                 //
                 // se hace dos veces para comprobar que se puede reusar
-                Buffer.BlockCopy (Plaintext, 0, datos, 0, Plaintext.Length);
+                Buzon.CopiaDatos (Plaintext, datos, Plaintext.Longitud);
+                //
                 aes.Cifra (datos);
-                for (int i = 0; i < datos.Length; ++ i) {
-                    if (datos [i] != Ciphertext [i]) {
+                for (int i = 0; i < datos.Longitud; ++ i) {
+                    if (datos.TomaByte (i) != Ciphertext.TomaByte (i)) {
                         throw new Exception ("Validación fallida.");
                     }
                 }
@@ -281,7 +315,7 @@ namespace com.mazc.Sistema {
         private class Investigacion {
 
 
-            public static void Investiga () {
+            internal static void Investiga () {
                 byte [] key = GenerateRandomNumber (32);
                 string mensaje = 
                     "El Gobierno considera que con la aprobación de esta ley se derogó todo aquello " + 
@@ -419,23 +453,23 @@ namespace com.mazc.Sistema {
     ///     * Un número de bloque dentro del mensaje. El número de bloque recorre los valores: 
     ///       0, ···, MaximoNumero.     
     /// </remarks>
-    public class ContadorCTR {
+    internal sealed class ContadorCTR {
 
 
         /// <summary>
         /// Tamaño de un contador, en bytes.
         /// </summary>
-        public const int BytesContador = CifradoAES.BytesBloque;
+        internal const int BytesContador = CifradoAES.BytesBloque;
 
         /// <summary>
         /// Valor máximo de los números de mensaje.
         /// </summary>
-        public const int MaximoMensaje = int.MaxValue;
+        internal const int MaximoMensaje = 5;//int.MaxValue;
 
         /// <summary>
         /// Valor máximo de los números de bloque.
         /// </summary>
-        public const int MaximoBloque = int.MaxValue;
+        internal const int MaximoBloque = int.MaxValue;
 
 
         #region varibles privadas
@@ -457,10 +491,10 @@ namespace com.mazc.Sistema {
         private const int bytes_bloque   = 4;
         private const int bytes_serie    = 8;
         private const int bytes_mensaje  = 4;
-        private const int inicio_bloque  = 0;
-        private const int inicio_serie   = inicio_bloque + bytes_bloque;
-        private const int inicio_mensaje = inicio_serie  + bytes_serie;
-
+        private const int inicio_serie   = 0;
+        private const int inicio_mensaje = inicio_serie   + bytes_serie;
+        private const int inicio_bloque  = inicio_mensaje + bytes_mensaje;
+ 
         #endregion
 
 
@@ -470,15 +504,14 @@ namespace com.mazc.Sistema {
         /// <remarks>
         /// Es necesario iniciar la serie con 'IniciaSerie'.
         /// </remarks>
-        public ContadorCTR () {
+        internal ContadorCTR () {
             serie_iniciada = false;
             buzon_contador = new byte [BytesContador];
         }
 
 
         /// <summary>
-        /// Establece la primera serie a ser usada en los contadores. La serie se asocia a una clave 
-        /// de encriptación nueva.
+        /// Establece los primeros números a ser usados en los contadores.
         /// </summary>
         /// <remarks>
         /// Establece el número de serie 0, el número de mensaje 0 y el número de bloque 0. Se usa
@@ -486,7 +519,7 @@ namespace com.mazc.Sistema {
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
         /// <param name="serie">marca de la nueva serie, </param>
-        public void IniciaSerie () {
+        internal void Inicia () {
             Depuracion.Asevera (! serie_iniciada);
             //
             numero_serie   = 0;
@@ -514,7 +547,7 @@ namespace com.mazc.Sistema {
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
         /// <param name="serie">marca de la nueva serie, </param>
-        public void CambiaSerie (long serie) {
+        internal void CambiaSerie (long serie) {
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (contador_leido);
             Depuracion.Asevera (numero_mensaje == 0);
@@ -543,7 +576,7 @@ namespace com.mazc.Sistema {
         /// Solo se puede usar este método cuando el número de serie y el número de mensaje no es 0.
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
-        public void AnulaMensaje () {
+        internal void AnulaMensaje () {
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (contador_leido);
             Depuracion.Asevera (numero_serie != 0);
@@ -568,7 +601,7 @@ namespace com.mazc.Sistema {
         /// Solo se puede usar este método cuando el número de serie y el número de mensaje no es 0.
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
-        public void IncrementaMensaje () {
+        internal void IncrementaMensaje () {
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (contador_leido);
             Depuracion.Asevera (numero_serie != 0);
@@ -595,7 +628,7 @@ namespace com.mazc.Sistema {
         /// <remarks>
         /// El contador queda preparado para ser leido (con 'AsignaContador').
         /// </remarks>
-        public void IncrementaBloque () {
+        internal void IncrementaBloque () {
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (contador_leido);
             Depuracion.Asevera (0 <= numero_bloque && numero_bloque < MaximoBloque);
@@ -611,7 +644,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número de serie del contador. Es el asignado en 'IniciaSerie'.
         /// </summary>
-        public long NumeroSerie {
+        internal long NumeroSerie {
             get {
                 return numero_serie;
             }
@@ -621,7 +654,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número del mensaje del contador. Recorre los valores:  1, ···, MaximoNumero, 0 
         /// </summary>
-        public int NumeroMensaje {
+        internal int NumeroMensaje {
             get {
                 return numero_mensaje;
             }
@@ -631,7 +664,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Número de bloque del contador. Recorre los valores:  0, ···, MaximoNumero
         /// </summary>
-        public int NumeroBloque {
+        internal int NumeroBloque {
             get {
                 return numero_bloque;
             }
@@ -647,14 +680,13 @@ namespace com.mazc.Sistema {
         /// deja de estar preparado para ser leido.
         /// </remarks>
         /// <param name="destino">array de bytes donde se copiará en contador</param>
-        /// <param name="posicion">en destino donde comenzará la copia del contador</param>
-        public void AsignaContador (byte [] destino, int posicion) {
+        internal void AsignaContador (Buzon destino) {
             Depuracion.Asevera (destino != null);
-            Depuracion.Asevera (posicion + BytesContador <= destino.Length);
+            Depuracion.Asevera (destino.Longitud == BytesContador);
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (! contador_leido);
             //
-            Buffer.BlockCopy (buzon_contador, 0, destino, posicion, BytesContador);
+            Buffer.BlockCopy (buzon_contador, 0, destino.Almacen, destino.Inicio, BytesContador);
             contador_leido = true;
         }
 
@@ -688,6 +720,10 @@ namespace com.mazc.Sistema {
 
 
         #region métodos privados
+
+
+        // para que funcione esta prueba hay que poner:
+        //      internal const int MaximoMensaje = 5;//int.MaxValue;
 
 
         /*
@@ -736,7 +772,7 @@ namespace com.mazc.Sistema {
         */
 
 
-        public static void Valida () {
+        private static void Valida () {
             ContadorCTR CTR = new ContadorCTR (); 
             ValidaIniciaSerie       (CTR);
             ValidaCambiaSerie       (CTR, 0x1F2F3F4F5F6F7F8F);
@@ -759,7 +795,7 @@ namespace com.mazc.Sistema {
         private static void ValidaIniciaSerie (ContadorCTR CTR) {
             Console.WriteLine ();
             Console.WriteLine ("mensaje:");
-            CTR.IniciaSerie ();
+            CTR.Inicia ();
             Imprime (CTR);
             for (int i = 1; i < 4; ++ i) {
                 CTR.IncrementaBloque ();
@@ -806,10 +842,11 @@ namespace com.mazc.Sistema {
 
         private static void Imprime (ContadorCTR CTR) {
             Console.Write ("    ");
-            byte [] contador = new byte [ContadorCTR.BytesContador];
-            CTR.AsignaContador (contador, 0);
+            Buzon contador = new Buzon ();
+            contador.Reserva (ContadorCTR.BytesContador);
+            CTR.AsignaContador (contador);
             for (int i = 0; i < ContadorCTR.BytesContador; ++ i) {
-                Console.Write ("{0:X2}", contador [i]);
+                Console.Write ("{0:X2}", contador.TomaByte (i));
             }
             Console.WriteLine ();
         }
@@ -828,13 +865,23 @@ namespace com.mazc.Sistema {
     /// Es una adaptación de la implementación propia de .Net, para su uso en la implementación del 
     /// canal seguro.
     /// </remarks>
-    public class CifradoRSA {
+    internal sealed class CifradoRSA {
 
 
         /// <summary>
         /// Tamaño de clave de encriptación, en bits.
         /// </summary>
-        const int BitsClave = 2048;
+        internal const int BitsClave = 2048;
+
+        /// <summary>
+        /// Tamaño máximo en bytes del mensaje a encriptar.
+        /// </summary>
+        internal const int MaximoBytesMensaje = 126;
+
+        /// <summary>
+        /// Tamaño del mensaje encriptado.
+        /// </summary>
+        internal const int BytesEncriptado = 256;
 
 
         # region variables privadas
@@ -857,11 +904,21 @@ namespace com.mazc.Sistema {
         /// </remarks>
         /// <param name="clave_publica">clave pública</param>
         /// <param name="clave_privada">clave privada</param>
-        public static void GeneraParClaves (out byte [] clave_publica, out byte [] clave_privada) {
+        internal static void GeneraParClaves (Buzon clave_publica, Buzon clave_privada) {
+            #if DEBUG
+            Depuracion.Asevera (clave_publica != null);
+            Depuracion.Asevera (clave_publica.Longitud == 0);
+            Depuracion.Asevera (clave_privada != null);
+            Depuracion.Asevera (clave_privada.Longitud == 0);
+            #endif
+            //
             RSA algoritmo = RSA.Create (BitsClave);
             try {
-                clave_publica = algoritmo.ExportRSAPublicKey ();
-                clave_privada = algoritmo.ExportRSAPrivateKey ();
+                byte [] clave; 
+                clave = algoritmo.ExportRSAPublicKey ();
+                clave_publica.ReservaMueve (clave);
+                clave = algoritmo.ExportRSAPrivateKey ();
+                clave_privada.ReservaMueve (clave);
             } finally {
                 algoritmo.Dispose ();
             }
@@ -872,17 +929,23 @@ namespace com.mazc.Sistema {
         /// Prepara la instancia para realiza desencriptaciones usando la clave pública indicada.
         /// </summary>
         /// <remarks>
-        /// Cada llamada a 'Inicia' debe tener la correspondiente llamada a 'Termina' (en un 'try', 
-        /// 'finally').
+        /// Cada llamada a 'IniciaPublica' debe tener la correspondiente llamada a 'Termina' (en un 
+        /// 'try', 'finally').
+        /// El formato de la clave es: "ASN.1-BER-encoded PKCS#1 RSAPublicKey structure".
         /// </remarks>
-        /// <param name="clave_AES">Clave de encriptación, de longitud 'BytesClave'.</param>
-        public void IniciaPublica (byte [] clave) {
+        /// <param name="clave_publica">Clave publica de encriptación.'.</param>
+        internal void IniciaPublica (Buzon clave_publica) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo == null);
             Depuracion.Asevera (! publica && ! privada);
+            Depuracion.Asevera (clave_publica != null);
+            Depuracion.Asevera (! clave_publica.Fragmento);
+            Depuracion.Asevera (clave_publica.Longitud > 0);
+            #endif
             //
             algoritmo = RSA.Create (BitsClave);
             int i;
-            algoritmo.ImportRSAPublicKey (clave, out i);
+            algoritmo.ImportRSAPublicKey (clave_publica.Almacen, out i);
             //
             privada = false;
             publica = true;
@@ -893,17 +956,23 @@ namespace com.mazc.Sistema {
         /// Prepara la instancia para realiza encriptaciones usando la clave privada indicada.
         /// </summary>
         /// <remarks>
-        /// Cada llamada a 'Inicia' debe tener la correspondiente llamada a 'Termina' (en un 'try', 
-        /// 'finally').
+        /// Cada llamada a 'IniciaPrivada' debe tener la correspondiente llamada a 'Termina' (en un 
+        /// 'try', 'finally').
+        /// El formato de la clave es: "ASN.1-BER-encoded PKCS#1 RSAPrivateKey structure".
         /// </remarks>
-        /// <param name="clave_AES">Clave de encriptación, de longitud 'BytesClave'.</param>
-        public void IniciaPrivada (byte [] clave_privada) {
+        /// <param name="clave_AES">Clave privada de encriptación.</param>
+        internal void IniciaPrivada (Buzon clave_privada) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo == null);
             Depuracion.Asevera (! publica && ! privada);
+            Depuracion.Asevera (clave_privada != null);
+            Depuracion.Asevera (! clave_privada.Fragmento);
+            Depuracion.Asevera (clave_privada.Longitud > 0);
+            #endif
             //
             algoritmo = RSA.Create (BitsClave);
             int i;
-            algoritmo.ImportRSAPrivateKey (clave_privada, out i);
+            algoritmo.ImportRSAPrivateKey (clave_privada.Almacen, out i);
             //
             privada = true;
             publica = false;
@@ -913,7 +982,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Libera los recursos usados durante la encriptación. Complementa la llamada a 'Inicia'.
         /// </summary>
-        public void Termina () {
+        internal void Termina () {
             Depuracion.Asevera (algoritmo != null);
             Depuracion.Asevera (publica || privada);
             //
@@ -929,27 +998,68 @@ namespace com.mazc.Sistema {
         /// </summary>
         /// <remarks>
         /// Se debe establecer previamente la clave pública medianta 'IniciaPublica'.
+        /// El tamaño máximo de 'mensaje' es 'MaximoBytesMensaje'.
         /// </remarks>
         /// <param name="mensaje">mensaje a encriptar</param>
         /// <param name="cifrado">resultado de la enriptación</param>
-        public void CifraPublica (byte [] mensaje, out byte [] cifrado) {
+        internal void CifraPublica (Buzon mensaje, Buzon cifrado) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo != null);
             Depuracion.Asevera (publica);
+            Depuracion.Asevera (mensaje != null);
+            Depuracion.Asevera (mensaje.Longitud > 0);
+            Depuracion.Asevera (mensaje.Longitud <= MaximoBytesMensaje);
+            Depuracion.Asevera (cifrado != null);
+            if (cifrado.Longitud > 0) {
+                Depuracion.Asevera (cifrado.Longitud == BytesEncriptado);
+            }
+            #endif
             //
-            cifrado = algoritmo.Encrypt (mensaje, RSAEncryptionPadding.OaepSHA512);
+            byte [] datos = algoritmo.Encrypt (mensaje.Almacen, RSAEncryptionPadding.OaepSHA512);
+            //
+            #if DEBUG
+            Depuracion.Asevera (datos.Length == BytesEncriptado);
+            #endif
+            //
+            if (cifrado.Longitud == 0) {
+                cifrado.ReservaMueve (datos);
+            } else {
+                Buffer.BlockCopy (datos, 0, cifrado.Almacen, cifrado.Inicio, BytesEncriptado);
+            }
         }
 
 
         /// <summary>
         /// Desencripta 'cifrado' con la clave privada y devuelve el mensaje.
         /// </summary>
+        /// <remarks>
+        /// Se debe establecer previamente la clave privada medianta 'IniciaPrivada'.
+        /// El tamaño de 'cifrado es 'BytesEncriptado'.
+        /// </remarks>
         /// <param name="cifrado">mensaje cifrado</param>
         /// <param name="mensaje">mensaje descifrado</param>
-        public void DescifraPrivada (byte [] cifrado, out byte [] mensaje) {
+        internal void DescifraPrivada (Buzon cifrado, Buzon mensaje) {
+            #if DEBUG
             Depuracion.Asevera (algoritmo != null);
             Depuracion.Asevera (privada);
+            Depuracion.Asevera (cifrado != null);
+            Depuracion.Asevera (cifrado.Longitud == BytesEncriptado);
+            Depuracion.Asevera (mensaje != null);
+            #endif
             //
-            mensaje = algoritmo.Decrypt (cifrado, RSAEncryptionPadding.OaepSHA512);
+            byte [] datos = algoritmo.Decrypt (cifrado.Almacen, RSAEncryptionPadding.OaepSHA512);
+            //
+            #if DEBUG
+            if (mensaje.Longitud > 0) {
+                Depuracion.Asevera (datos.Length <= mensaje.Longitud);
+            }
+            #endif
+            //
+            if (mensaje.Longitud == 0) {
+                mensaje.ReservaMueve (datos);
+            } else {
+                Buffer.BlockCopy (datos, 0, mensaje.Almacen, mensaje.Inicio, datos.Length);
+            }
         }
 
 
@@ -960,9 +1070,9 @@ namespace com.mazc.Sistema {
         /// Validación del funcionamiento de esta clase. Solo usado en pruebas.
         /// </summary>
         private static void Valida () {
-            byte [] clave_publica;
-            byte [] clave_privada;
-            CifradoRSA.GeneraParClaves (out clave_publica, out clave_privada);
+            Buzon clave_publica = new Buzon ();
+            Buzon clave_privada = new Buzon ();
+            CifradoRSA.GeneraParClaves (clave_publica, clave_privada);
             //ImprimeCarga ("clave_publica", clave_publica);
             //ImprimeCarga ("clave_privada", clave_privada);
             //
@@ -977,13 +1087,15 @@ namespace com.mazc.Sistema {
             string original = texto.Substring (0, 123);
             
             //
-            byte [] codificado = Encoding.UTF8.GetBytes (original);
-            Console.WriteLine ("codificado = {0} bytes", codificado.Length);
+            Buzon codificado = new Buzon ();  
+            codificado.ReservaMueve (Encoding.UTF8.GetBytes (original));
+            Console.WriteLine ("codificado = {0} bytes", codificado.Longitud);
             CifradoRSA rsa = new CifradoRSA ();
-            byte [] encriptado;
+            Buzon encriptado = new Buzon ();
+            //encriptado.Reserva (256);
             try {
                 rsa.IniciaPublica (clave_publica);
-                rsa.CifraPublica (codificado, out encriptado);
+                rsa.CifraPublica (codificado, encriptado);
             } catch (Exception e) {
                 Console.WriteLine ("EXCEPCIÓN:");
                 Console.WriteLine ("    " + e.Message); 
@@ -995,9 +1107,10 @@ namespace com.mazc.Sistema {
             string descodificado;
             try {
                 rsa.IniciaPrivada (clave_privada);
-                byte [] desencriptado;
-                rsa.DescifraPrivada (encriptado, out desencriptado);
-                descodificado = Encoding.Default.GetString (desencriptado);
+                Buzon desencriptado = new Buzon ();
+                //desencriptado.Reserva (encriptado.Longitud);
+                rsa.DescifraPrivada (encriptado, desencriptado);
+                descodificado = Encoding.Default.GetString (desencriptado.Almacen);
             } finally {
                 rsa.Termina ();
             }

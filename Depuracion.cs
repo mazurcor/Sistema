@@ -14,7 +14,7 @@ namespace com.mazc.Sistema {
     class Depuracion {
 
 
-        internal static void Valida (bool condicion, string mensaje) {
+        internal static void Depura (bool condicion, string mensaje) {
             if (condicion) {
                 throw new Exception (mensaje);
             }
