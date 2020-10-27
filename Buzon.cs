@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------------------------
 // archivo:     Sistema/Buzon.cs
-// versión:     25-Oct-2020
+// versión:     27-Oct-2020, terminado y documentado.
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------
@@ -13,6 +13,10 @@ using System.Text;
 namespace com.mazc.Sistema {
 
 
+    // Encapsula un array de bytes. 
+    // Tambien puede ser una porción secuencial del array de bytes de otra instancia de 'Buzon'.
+    // Es una clase de utilidad que simplifica la implementación de los componentes de 
+    // 'com.mazc.Sistema'.
     internal sealed class Buzon {
 
 
@@ -23,21 +27,25 @@ namespace com.mazc.Sistema {
         private int     inicio;
         private int     longitud;
 
-        // si es > 0, hay buzones que son fragmentos de este buzon
-        // si es = 0, no hay buzones que son fragmentos de este buzon
-        // si es < 0, este es un fragmento de otro buzon
-        private int fragmentos;
+        // si es > 0, hay buzones que son porciones de este buzon
+        // si es = 0, no hay buzones que son porciones de este buzon
+        // si es < 0, este es un porción de otro buzon
+        private int porciones;
 
         #endregion
 
 
-        internal byte [] Almacen {
+        // Array de bytes encapsulado en esta instancia. 
+        // Si esta instancia es una porción de otra instancia, es el array de esta última.
+        internal byte [] Datos {
             get {
                 return this.almacen;
             }
         }
 
 
+        // Indice del inicio del array de bytes encapsulado.
+        // Si es una porción, es el indice donde comienza la porción. Si no es una porción, es 0.
         internal int Inicio {
             get {
                 return this.inicio;
@@ -45,6 +53,9 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Longitud en bytes del array encapsulado.
+        // Si es porción, es la longitud del segmento de bytes. Si no es una porción, es la longitud
+        // del array de bytes.
         internal int Longitud {
             get {
                 return this.longitud;
@@ -52,13 +63,39 @@ namespace com.mazc.Sistema {
         }
 
 
-        internal bool Fragmento {
+        // Indica si esta instancia es una porción de otra instancia de 'Buzon'.
+        internal bool EsPorcion {
             get {
-                return fragmentos < 0;
+                return porciones < 0;
             }
         }
 
 
+        // Devuelve y asigna un byte del array encapsulado, el situado en la posicion indicada.
+        // Su es una porción, se toma la posición a partir del inicio de la porción.
+        // No puede ser una instancia vacía.
+        internal byte this [int posicion] {
+            get {
+                #if DEBUG
+                Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
+                ValidaRango (posicion, 1);
+                #endif
+                //
+                return this.almacen [this.inicio + posicion];
+            }
+            set {
+                #if DEBUG
+                Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
+                ValidaRango (posicion, 1);
+                #endif
+                //
+                this.almacen [this.inicio + posicion] = value;
+            }
+        }
+
+
+        // Reserva memoria para un array de bytes de la longitud indicada y lo encapsula en la instancia.
+        // La instancia debe estar previamente vacía.
         internal void Reserva (int longitud_) {
             #if DEBUG
             Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
@@ -68,10 +105,31 @@ namespace com.mazc.Sistema {
             this.almacen    = new byte [longitud_];
             this.inicio     = 0;
             this.longitud   = longitud_;
-            this.fragmentos = 0;
+            this.porciones = 0;
         }
 
 
+        // Encapsula en esta instancia el array de bytes indicado. 
+        // No se debe encapsular el mismo array de bytes en dos instancias distintas. Para ello 
+        // están las porciones.
+        // La instancia debe estar previamente vacía. 'datos' no puede tener longitud cero. 
+        internal void Construye (byte [] datos) {
+            #if DEBUG
+            Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
+            Depuracion.Depura (datos == null, "'datos' nulo.");
+            Depuracion.Depura (datos.Length == 0, "Longitud de 'datos' inválida.");
+            #endif
+            //
+            this.almacen    = datos;
+            this.inicio     = 0;
+            this.longitud   = datos.Length;
+            this.porciones = 0;
+        }
+
+
+        // Reserva memoria para un array de bytes, lo encapsula en la instancia y copia el array de 
+        // bytes 'datos' en él.
+        // La instancia debe estar previamente vacía. 'datos' no puede tener longitud cero.
         internal void ReservaCopia (byte [] datos) {
             #if DEBUG
             Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
@@ -82,26 +140,18 @@ namespace com.mazc.Sistema {
             this.almacen    = new byte [datos.Length];
             this.inicio     = 0;
             this.longitud   = datos.Length;
-            this.fragmentos = 0;
+            this.porciones = 0;
             //
             Buffer.BlockCopy (datos, 0, this.almacen, 0, datos.Length);
         }
 
 
-        internal void ReservaMueve (byte [] datos) {
-            #if DEBUG
-            Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
-            Depuracion.Depura (datos == null, "'datos' nulo.");
-            Depuracion.Depura (datos.Length == 0, "Longitud de 'datos' inválida.");
-            #endif
-            //
-            this.almacen    = datos;
-            this.inicio     = 0;
-            this.longitud   = datos.Length;
-            this.fragmentos = 0;
-        }
-
-
+        // Reserva memoria para un array de bytes, lo encapsula en la instancia y escribe la cadena de 
+        // caracteres en él.
+        // Cada caracter de 'datos' se escribe en dos bytes del array, el formato usado es 
+        // 'big-endian'. Por tanto, la longitud del array de bytes es el doble que la de la cadena 
+        // de caracteres.
+        // La instancia debe estar previamente vacía. 'datos' no puede tener longitud cero.
         internal void ReservaCopia (string cadena) {
             #if DEBUG
             Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
@@ -112,28 +162,14 @@ namespace com.mazc.Sistema {
             this.almacen    = new byte [cadena.Length * 2];
             this.inicio     = 0;
             this.longitud   = cadena.Length * 2;
-            this.fragmentos = 0;
+            this.porciones = 0;
             //
             PonString (0, cadena);
         }
 
 
-        //internal void ReservaCopia (Buzon datos) {
-        //    #if DEBUG
-        //    Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
-        //    Depuracion.Depura (datos == null, "'datos' nulo.");
-        //    Depuracion.Depura (datos.Longitud == 0, "Longitud de 'datos' inválida.");
-        //    #endif
-        //    //
-        //    this.almacen    = new byte [datos.Longitud];
-        //    this.inicio     = 0;
-        //    this.longitud   = datos.Longitud;
-        //    this.fragmentos = 0;
-        //    //
-        //    Buffer.BlockCopy (datos.almacen, datos.inicio, this.almacen, 0, datos.Longitud);
-        //}
-
-
+        // Libera la memoria usada por esta instancia, dejandola vacía.
+        // Esta instancia no puede ser una porción, ni debe haber porciones de esta instancia.
         internal void Libera () {
             if (this.almacen == null) {
                 return;
@@ -141,123 +177,147 @@ namespace com.mazc.Sistema {
             //
             #if DEBUG
             // no actua en buzón vacío
-            Depuracion.Depura (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (this.fragmentos > 0, "Quedan fragmentos de este 'Buzon'.");
+            Depuracion.Depura (this.porciones < 0, "Este es porcion de otro 'Buzon'.");
+            Depuracion.Depura (this.porciones > 0, "Quedan porciones de este 'Buzon'.");
             #endif
             //
-            this.almacen    = null;
-            this.inicio     = 0;
-            this.longitud   = 0;
-            this.fragmentos = 0;
+            this.almacen   = null;
+            this.inicio    = 0;
+            this.longitud  = 0;
+            this.porciones = 0;
         }
 
 
-        internal void CreaFragmento (int inicio_, int longitud_, Buzon fragmento) {
+        // Tansforma un buzón en una porción que encapsula un rango del array de bytes de esta 
+        // intancia.
+        // El buzón a transformar, 'porcion',  debe estar vacío.
+        // La instancia no puede estar vacía ni ser una porción de otro buzón. 'inicio' y 
+        // 'longitud' deben designar un rango válido en el array de bytes. 
+        // En la instancia queda anotado que hay una porción mas creada sobre ella.
+        internal void ConstruyePorcion (int posicion, int longitud, Buzon porcion) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Depura (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (inicio_ < 0, "'inicio' inválido.");
-            Depuracion.Depura (longitud_ <= 0, "'longitud' inválida.");
-            Depuracion.Depura (inicio_ + longitud_ - 1 >= this.longitud, "'longitud' excesivo.");
-            Depuracion.Depura (fragmento == null, "'fragmento' nulo.");
-            Depuracion.Depura (fragmento.almacen != null, "'fragmento' no vacío.");
+            Depuracion.Depura (this.porciones < 0, "Este es porcion de otro 'Buzon'.");
+            ValidaRango (posicion, longitud);
+            Depuracion.Depura (porcion == null, "'porcion' nulo.");
+            Depuracion.Depura (porcion.almacen != null, "'porcion' no vacío.");
             #endif
             //
-            fragmento.almacen    = this.almacen;
-            fragmento.inicio     = inicio_;
-            fragmento.longitud   = longitud_;
-            fragmento.fragmentos = -1;
-            this.fragmentos ++;
+            porcion.almacen    = this.almacen;
+            porcion.inicio     = posicion;
+            porcion.longitud   = longitud;
+            porcion.porciones = -1;
+            this.porciones ++;
         }
 
 
-        internal void AnulaFragmento (Buzon fragmento) {
+        // Anula una porción de esta instancia, dejandola vacía.
+        // El buzón anulado ('porcion') debe ser una porción previamente construida sobre esta 
+        // instancia.
+        // En la instancia queda anotado que hay una porción menos creada sobre ella.
+        internal void AnulaPorcion (Buzon porcion) {
             #if DEBUG
-            Depuracion.Depura (fragmento == null, "'fragmento' nulo");
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Depura (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (this.fragmentos == 0, "Este no tiene fragmentos.");
-            Depuracion.Depura (fragmento.almacen == null, "'fragmento' vacío");
-            Depuracion.Depura (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
-            Depuracion.Depura (fragmento.almacen != this.almacen, 
-                               "'fragmento' no es fragmento de este");
+            Depuracion.Depura (this.porciones < 0, "Este es porcion de otro 'Buzon'.");
+            Depuracion.Depura (this.porciones == 0, "Este no tiene porciones.");
+            Depuracion.Depura (porcion == null, "'porcion' nulo");
+            Depuracion.Depura (porcion.almacen == null, "'porcion' vacío");
+            Depuracion.Depura (porcion.porciones >= 0, "'porcion' no es un porcion'");
+            Depuracion.Depura (porcion.almacen != this.almacen, 
+                               "'porcion' no es porcion de este");
             #endif
             //
-            fragmento.almacen    = null;
-            fragmento.inicio     = 0;
-            fragmento.longitud   = 0;
-            fragmento.fragmentos = 0;
-            this.fragmentos --;
+            porcion.almacen   = null;
+            porcion.inicio    = 0;
+            porcion.longitud  = 0;
+            porcion.porciones = 0;
+            this.porciones --;
         }
 
 
-        internal void ResituaFragmento (Buzon fragmento, int medida) {
+        // Cambia una porción de esta instancia, desplazando el rango del array de bytes, en la 
+        // medida indicada.
+        // El buzón cambiado ('porcion') debe ser una porción previamente construida sobre esta 
+        // instancia.
+        // Tras el cambio, 'porcion' debe designar un rango válido en el array de bytes. 
+        internal void ResituaPorcion (Buzon porcion, int medida) {
             #if DEBUG
-            Depuracion.Depura (fragmento == null, "'fragmento' nulo");
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Depura (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (this.fragmentos == 0, "Este no tiene fragmentos.");
-            Depuracion.Depura (fragmento.almacen == null, "'fragmento' es vacío");
-            Depuracion.Depura (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
-            Depuracion.Depura (fragmento.almacen != this.almacen, 
-                               "'fragmento' no es fragmento de este");
+            Depuracion.Depura (this.porciones < 0, "Este es porcion de otro 'Buzon'.");
+            Depuracion.Depura (this.porciones == 0, "Este no tiene porciones.");
+            Depuracion.Depura (porcion == null, "'porcion' nulo");
+            Depuracion.Depura (porcion.almacen == null, "'porcion' es vacío");
+            Depuracion.Depura (porcion.porciones >= 0, "'porcion' no es un porción'");
+            Depuracion.Depura (porcion.almacen != this.almacen, 
+                               "'porcion' no es porcion de este");
             // this.inicio será 0
-            int poscn_fragm = fragmento.inicio;
-            int final_fragm = fragmento.inicio + fragmento.longitud - 1;
+            int poscn_fragm = porcion.inicio;
+            int final_fragm = porcion.inicio + porcion.longitud - 1;
             poscn_fragm += medida;
             final_fragm += medida;
-            Depuracion.Depura (poscn_fragm < 0, "'fragmento' se situa fuera");
+            Depuracion.Depura (poscn_fragm < 0, "'porcion' se situa fuera");
             Depuracion.Depura (this.longitud - 1 < final_fragm, "'medida' inválida.");
             #endif
             //
-            fragmento.inicio += medida;
+            porcion.inicio += medida;
         }
 
 
-        internal void RedimensionaFragmento (Buzon fragmento, int medida) {
+        // Cambia una porción de esta instancia, modificando la longitud del rango del array de 
+        // bytes, en la medida indicada.
+        // El buzón cambiado ('porcion') debe ser una porción previamente construida sobre esta 
+        // instancia.
+        // Tras el cambio, 'porcion' debe designar un rango válido en el array de bytes. 
+        internal void RedimensionaPorcion (Buzon porcion, int medida) {
             #if DEBUG
-            Depuracion.Depura (fragmento == null, "'fragmento' nulo");
+            Depuracion.Depura (porcion == null, "'porcion' nulo");
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
-            Depuracion.Depura (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (this.fragmentos == 0, "Este no tiene fragmentos.");
-            Depuracion.Depura (fragmento.almacen == null, "'fragmento' es vacío");
-            Depuracion.Depura (fragmento.fragmentos >= 0, "'fragmento' no es un fragmento'");
-            Depuracion.Depura (fragmento.almacen != this.almacen, 
-                               "'fragmento' no es fragmento de este");
+            Depuracion.Depura (this.porciones < 0, "Este es porcion de otro 'Buzon'.");
+            Depuracion.Depura (this.porciones == 0, "Este no tiene porciones.");
+            Depuracion.Depura (porcion.almacen == null, "'porcion' es vacío");
+            Depuracion.Depura (porcion.porciones >= 0, "'porcion' no es un porcion'");
+            Depuracion.Depura (porcion.almacen != this.almacen, 
+                               "'porcion' no es porcion de este");
             // this.inicio será 0
-            int poscn_fragm = fragmento.inicio;
-            int final_fragm = fragmento.inicio + fragmento.longitud - 1;
+            int poscn_fragm = porcion.inicio;
+            int final_fragm = porcion.inicio + porcion.longitud - 1;
             final_fragm += medida;
             Depuracion.Depura (final_fragm < poscn_fragm, "'medida' inválida.");
-            Depuracion.Depura (this.longitud - 1 < final_fragm, "'fragmento' se situa fuera");
+            Depuracion.Depura (this.longitud - 1 < final_fragm, "'porcion' se situa fuera");
             #endif
             //
-            fragmento.inicio += medida;
+            porcion.inicio += medida;
         }
 
 
+        // Traslada el array de bytes encapsulado desde el buzón indicado, hasta esta instancia.
+        // Esta instancia se vacía antes del traslado. 'origen' queda vacío tras el traslado.
+        // Ni esta instancia ni 'origen' pueden ser porciones, ni pueden tener porciones construidas 
+        // sobre ellos.
         internal void TrasponBuzon (Buzon origen) {
             #if DEBUG
             // admite buzon vacío y no vacío
+            Depuracion.Depura (this.porciones < 0, "Este es porción de otro 'Buzon'.");
+            Depuracion.Depura (this.porciones > 0, "Quedan porciones de este 'Buzon'.");
             Depuracion.Depura (origen == null, "'origen' nulo");
-            Depuracion.Depura (this.fragmentos < 0, "Este es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (this.fragmentos > 0, "Quedan fragmentos de este 'Buzon'.");
             Depuracion.Depura (origen.almacen == null, "'origen' vacío.");
-            Depuracion.Depura (origen.fragmentos < 0, "'origen' es fragmento de otro 'Buzon'.");
-            Depuracion.Depura (origen.fragmentos > 0, "Quedan fragmentos de 'origen'.");
+            Depuracion.Depura (origen.porciones < 0, "'origen' es porcion de otro 'Buzon'.");
+            Depuracion.Depura (origen.porciones > 0, "Quedan porciones de 'origen'.");
             #endif
             //
-            this.almacen    = origen.almacen;
-            this.inicio     = origen.inicio;
-            this.longitud   = origen.longitud;
-            this.fragmentos = origen.fragmentos;
-            origen.almacen    = null;
-            origen.inicio     = 0;
-            origen.longitud   = 0;
-            origen.fragmentos = 0;
+            this.almacen     = origen.almacen;
+            this.inicio      = origen.inicio;
+            this.longitud    = origen.longitud;
+            this.porciones   = origen.porciones;
+            origen.almacen   = null;
+            origen.inicio    = 0;
+            origen.longitud  = 0;
+            origen.porciones = 0;
         }
 
 
+        // Compara los arrays de bytes de dos buzones devolviendo si son iguales.
+        // Compara también buzones vacíos'.
         internal static bool DatosIguales (Buzon primero, Buzon segundo) {
             // admite buzones vacios o no
             //
@@ -279,6 +339,36 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Copia el array de bytes de un buzón en otro buzón.
+        // Los buzones deben ser de la misma longitud y no puede ser vacíos.
+        // Los buzones puede ser porciones (uno o los dos). En tal caso se copia el rango que 
+        // especifican.
+        internal static void CopiaDatos (Buzon origen, Buzon destino) {
+            #if DEBUG
+            Depuracion.Depura (origen  == null, "'origen' nulo");
+            Depuracion.Depura (destino == null, "'destino' nulo");
+            Depuracion.Depura (origen .almacen == null, "'origen' vacío");
+            Depuracion.Depura (destino.almacen == null, "'destino' vacío");
+            Depuracion.Depura (origen.longitud != destino.longitud, "'origen' y 'destino' de longitudes distintas");
+            #endif
+            //
+            int indice_origen  = origen.inicio;
+            int indice_destino = destino.inicio;
+            int longitud = origen.longitud;
+            while (longitud > 0) {
+                destino.almacen [indice_destino] = origen.almacen [indice_origen];
+                indice_origen ++;
+                indice_destino ++;
+                longitud --;
+            }
+        }
+
+
+        // Copia una parte del array de bytes de un buzón en otro buzón. 
+        // El rango de bytes a copiar, tanto en 'origen' como en 'destino', es de 0 a 'longitud_'-1. 
+        // El rango debe ser válido en ambos buzones.
+        // Los buzones puede ser porciones (uno o los dos). En tal caso, el rango a copiar se toma 
+        // dentro del rango de la porción.
         internal static void CopiaDatos (Buzon origen, Buzon destino, int longitud_) {
             #if DEBUG
             Depuracion.Depura (origen  == null, "'origen' nulo");
@@ -300,6 +390,8 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Asigna 0 a los bytes del array encapsulado en esta instancia.
+        // Esta instancia no puede ser vacía.
         internal void Blanquea () {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -315,26 +407,10 @@ namespace com.mazc.Sistema {
         }
 
 
-        internal void PonByte (int posicion, byte numero) {
-            #if DEBUG
-            Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 1);
-            #endif
-            //
-            this.almacen [this.inicio + posicion] = numero;
-        }
-
-
-        internal byte TomaByte (int posicion) {
-            #if DEBUG
-            Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
-            ValidaRango (posicion, 1);
-            #endif
-            //
-            return this.almacen [this.inicio + posicion];
-        }
-
-
+        // Escribe en el array del buzón la representación en bytes del número. 
+        // El formato usado es 'big-endian'.
+        // Se escriben 2 bytes en la posición indicada, el rango escrito debe estar dentro del array 
+        // de bytes de la instancia.
         internal void PonShort (int posicion, short numero) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -347,6 +423,10 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Lee del array del buzón la representación en bytes de un entero corto. 
+        // El formato usado es 'big-endian'.
+        // Se leen 2 bytes de la posición indicada, el rango leido debe estar dentro del array 
+        // de bytes de la instancia.
         internal short TomaShort (int posicion) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -359,6 +439,10 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Escribe en el array del buzón la representación en bytes del número. 
+        // El formato usado es 'big-endian'.
+        // Se escriben 4 bytes en la posición indicada, el rango escrito debe estar dentro del array 
+        // de bytes de la instancia.
         internal void PonInt (int posicion, int numero) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -373,6 +457,10 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Lee del array del buzón la representación en bytes de un entero. 
+        // El formato usado es 'big-endian'.
+        // Se leen 4 bytes de la posición indicada, el rango leido debe estar dentro del array 
+        // de bytes de la instancia.
         internal int TomaInt (int posicion) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -387,6 +475,10 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Escribe en el array del buzón la representación en bytes del número. 
+        // El formato usado es 'big-endian'.
+        // Se escriben 8 bytes en la posición indicada, el rango escrito debe estar dentro del array 
+        // de bytes de la instancia.
         internal void PonLong (int posicion, long numero) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -405,6 +497,10 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Lee del array del buzón la representación en bytes de un entero largo. 
+        // El formato usado es 'big-endian'.
+        // Se leen 8 bytes de la posición indicada, el rango leido debe estar dentro del array 
+        // de bytes de la instancia.
         internal long TomaLong (int posicion) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -423,6 +519,11 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Escribe la cadena de caracteres en el array del buzón. 
+        // Cada caracter se escribe en dos bytes del array, el formato usado es 'big-endian'. Por 
+        // tanto, el número de bytes escritos es el doble de la longitud de la cadena de caracteres.
+        // Se escriben los bytes en la posición indicada, el rango escrito debe estar dentro del 
+        // array de bytes de la instancia.
         internal void PonString (int posicion, string cadena) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -440,6 +541,12 @@ namespace com.mazc.Sistema {
         }
 
 
+        // Lee una serie de caracteres del array del buzón y los escribe en una cadena caracteres. 
+        // Cada caracter de se lee de dos bytes del array, el formato usado es 'big-endian'.  
+        // El número de caracteres leidos es 'longitud_' y el número de bytes leidos es el doble.
+        // Se lee los bytes de la posición indicada, el rango leido debe estar dentro del array de 
+        // bytes de la instancia.
+        // Antes de escribir los caracteres en 'cadena', esta se vacía.
         internal void TomaString (int posicion, int longitud_, StringBuilder cadena) {
             #if DEBUG
             Depuracion.Depura (this.almacen == null, "'Buzon' vacío.");
@@ -464,8 +571,8 @@ namespace com.mazc.Sistema {
 
         private void ValidaRango (int posicion_, int longitud_) {
             Depuracion.Depura (posicion_ < 0, "'posicion' inválida.");
-            Depuracion.Depura (longitud_ < 0, "'longitud' inválida.");
-            Depuracion.Depura (this.longitud < posicion_ + longitud_ - 1, "'posicion' o 'longitud' inválidas.");
+            Depuracion.Depura (longitud_ <= 0, "'longitud' inválida.");
+            Depuracion.Depura (this.longitud <= posicion_ + longitud_ - 1, "'posicion' o 'longitud' inválidas.");
         }
 
 
