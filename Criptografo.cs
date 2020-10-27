@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------------------------
 // archivo:     Sistema/Criptografo.cs
-// versión:     25-Oct-2020
+// versión:     28-Oct-2020, terminado, documentado.
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------
@@ -14,25 +14,43 @@ using System.Text;
 namespace com.mazc.Sistema {
 
 
+    /// <summary>
+    /// Genera valores aleatorios validos para su uso en criptografía.
+    /// </summary>
+    /// <remarks>
+    /// Es una adaptación de la implementación propia de .Net, para su uso en la implementación del 
+    /// canal seguro.
+    /// </remarks>
     internal sealed class Aleatorio {
 
 
         #region variables privadas
 
-        private RNGCryptoServiceProvider algoritmo;
+        private RandomNumberGenerator/*RNGCryptoServiceProvider*/ algoritmo;
 
         #endregion
 
 
+        /// <summary>
+        /// Prepara la instancia para generar los datos aleatorios.
+        /// </summary>
+        /// <remarks>
+        /// Cada llamada a 'Inicia' debe tener la correspondiente llamada a 'Termina' (en un 'try', 
+        /// 'finally').
+        /// </remarks>
         internal void Inicia () {
             #if DEBUG
             Depuracion.Asevera (algoritmo == null);
             #endif
             //
-            algoritmo = new RNGCryptoServiceProvider ();
+            algoritmo = RandomNumberGenerator.Create ();//new RNGCryptoServiceProvider ();
         }
 
 
+        /// <summary>
+        /// Libera los recursos usados durante la generación de datos aleatorios. Complementa la 
+        /// llamada a 'Inicia'.
+        /// </summary>
         internal void Termina () {
             if (algoritmo == null) {
                 return;
@@ -42,6 +60,13 @@ namespace com.mazc.Sistema {
         }
 
 
+        /// <summary>
+        /// Genera datos aleatorios y los escribe en el buzón.
+        /// </summary>
+        /// <remarks>
+        /// El numero de bytes generados es igual a la longitud del buzón.
+        /// </remarks>
+        /// <param name="data">Buzón donde se dejarán los datos aleatorios.</param>
         internal void Genera (Buzon data) {
             #if DEBUG
             Depuracion.Asevera (algoritmo != null);
@@ -56,12 +81,30 @@ namespace com.mazc.Sistema {
     }
 
 
+    /// <summary>
+    /// Calcula codigos de autenticación de mensaje basados en hash (HMAC). Para el cáculo de los 
+    /// hash usa SHA-256.
+    /// </summary>
+    /// <remarks>
+    /// Se calcula el valor HMAC sobre un mensaje de longitud arbitraria y produce un código HMAC de 
+    /// 256 bits. El cálculo incluye el uso de una clave de autenticación secreta. 
+    /// </remarks>
     internal sealed class CalculoHMAC {
   
-        
-        /// longitud del valor de resumen (hash) de los datos 
+
+        /// <summary>
+        /// Longitud en bis de los códigos HMAC calculados.
+        /// </summary>
         internal const int BitsValor  = 256;
+        /// <summary>
+        /// Longitud en bytes de los códigos HMAC calculados.
+        /// </summary>
         internal const int BytesValor =  32;
+
+        /// <summary>
+        /// Longitud en bytes de la clave de autenticación usada en el cálculo de los códigos HMAC.
+        /// </summary>
+        internal const int BytesClave = 64;
 
 
         #region variables privadas
@@ -71,8 +114,16 @@ namespace com.mazc.Sistema {
         #endregion
 
 
-        // El tamaño recomendado de 'clave_SHA' es 64 bytes. Si es mayor, el algoritmo hace un hash 
-        // (usando SHA-256) y si es menor, lo completa a 64 bytes.
+        /// <summary>
+        /// Prepara la instancia para realizar los cálculos, estableciendo la clave de 
+        /// autenticación.
+        /// </summary>
+        /// <remarks>
+        /// El tamaño de 'clave_SHA' debe ser 64 bytes. 
+        /// Cada llamada a 'Inicia' debe tener la correspondiente llamada a 'Termina' (en un 'try', 
+        /// 'finally').
+        /// </remarks>
+        /// <param name="clave_SHA">Clave de autenticación, de longitud 'BytesClave'.</param>
         internal void Inicia (Buzon clave_SHA) {
             #if DEBUG
             Depuracion.Asevera (algoritmo == null);
@@ -90,6 +141,10 @@ namespace com.mazc.Sistema {
         }
 
 
+        /// <summary>
+        /// Libera los recursos usados durante calculos de códigos HMAC. Complementa la 
+        /// llamada a 'Inicia'.
+        /// </summary>
         internal void Termina () {
             if (algoritmo == null) {
                 return;
@@ -99,6 +154,16 @@ namespace com.mazc.Sistema {
         }
 
 
+        /// <summary>
+        /// Calcula el código HMAC del mensaje y lo deja en el buzón indicado.
+        /// </summary>
+        /// <remarks>
+        /// El buzón 'valor_HMAC' puede ser vacío; en ese caso se crea un array de bytes de longitud 
+        /// 'BytesValor' y se encapsula en el buzón. Si 'valor_HMAC' no es vacío, su longitud debe 
+        /// ser 'BytesValor'.
+        /// </remarks>
+        /// <param name="mensaje">Mensaje para el que se calcula el código HMAC.</param>
+        /// <param name="valor_HMAC">Código HMAC calculado, de longitud BytesValor.</param>
         internal void Calcula (Buzon mensaje, Buzon valor_HMAC) {
             #if DEBUG
             Depuracion.Asevera (algoritmo != null);
@@ -176,8 +241,9 @@ namespace com.mazc.Sistema {
         /// <remarks>
         /// Cada llamada a 'Inicia' debe tener la correspondiente llamada a 'Termina' (en un 'try', 
         /// 'finally').
+        /// La clave de encriptación debe tener longitud 'BytesClave'.
         /// </remarks>
-        /// <param name="clave_AES">Clave de encriptación, de longitud 'BytesClave'.</param>
+        /// <param name="clave_AES">Clave de encriptación.</param>
         internal void Inicia (Buzon clave_AES) {
             #if DEBUG
             Depuracion.Asevera (algoritmo == null);
@@ -222,8 +288,12 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Encripta varios bloques de datos, sobrescribiendolos con en resultado.
         /// </summary>
-        /// <param name="buzon">uno o más bloques de datos, que se cambian por los bloques 
-        /// encriptados; la longitud debe ser múltiplo de 'BytesBloque'</param>
+        /// <remarks>
+        /// La longitud de los datos a cifrar (y de los descifrados) no puede ser 0 y debe ser 
+        /// múltiplo de 'BytesBloque'.
+        /// </remarks>
+        /// <param name="buzon">Uno o más bloques de datos, que se cambian por los bloques 
+        /// encriptados.</param>
         internal void Cifra (Buzon buzon) {
             #if DEBUG
             Depuracion.Asevera (encriptador != null);
@@ -233,7 +303,8 @@ namespace com.mazc.Sistema {
             #endif
             //
             // encripta todos los bloques, deja el resultado 'in situ'
-            int respuesta = encriptador.TransformBlock (buzon.Datos, buzon.Inicio, buzon.Longitud, buzon.Datos, buzon.Inicio);
+            int respuesta = encriptador.TransformBlock (
+                    buzon.Datos, buzon.Inicio, buzon.Longitud, buzon.Datos, buzon.Inicio);
             //
             #if DEBUG
             // en otros nodos de operación es posible que queden bloques pendientes de hacer, en 
@@ -464,7 +535,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Valor máximo de los números de mensaje.
         /// </summary>
-        internal const int MaximoMensaje = 5;//int.MaxValue;
+        internal const int MaximoMensaje = int.MaxValue;
 
         /// <summary>
         /// Valor máximo de los números de bloque.
@@ -678,8 +749,9 @@ namespace com.mazc.Sistema {
         /// El contador debe estar preprado para ser leido. Esto se hace con 'IniciaSerie', 
         /// 'IncrementaMensaje' o 'IncrementaBloque'. Tras copiarlo (con este método) el contador 
         /// deja de estar preparado para ser leido.
+        /// El buzón donde se copia el contador debe ser de longitud 'BytesContador'.
         /// </remarks>
-        /// <param name="destino">array de bytes donde se copiará en contador</param>
+        /// <param name="destino">Buzón donde se copiará en contador.</param>
         internal void AsignaContador (Buzon destino) {
             Depuracion.Asevera (destino != null);
             Depuracion.Asevera (destino.Longitud == BytesContador);
@@ -902,8 +974,8 @@ namespace com.mazc.Sistema {
         /// <remarks>
         /// El formato de exportación es PKCS#1.
         /// </remarks>
-        /// <param name="clave_publica">clave pública</param>
-        /// <param name="clave_privada">clave privada</param>
+        /// <param name="clave_publica">Clave pública de cifrado.</param>
+        /// <param name="clave_privada">Clave privada de descifrado.</param>
         internal static void GeneraParClaves (Buzon clave_publica, Buzon clave_privada) {
             #if DEBUG
             Depuracion.Asevera (clave_publica != null);
@@ -931,8 +1003,8 @@ namespace com.mazc.Sistema {
         /// <remarks>
         /// El formato de exportación es PKCS#1.
         /// </remarks>
-        /// <param name="clave_publica">clave pública</param>
-        /// <param name="clave_privada">clave privada</param>
+        /// <param name="clave_publica">Clave pública de cifrado.</param>
+        /// <param name="clave_privada">Clave privada de descifrado.</param>
         public static void GeneraParClaves (out byte [] clave_publica, out byte [] clave_privada) {
             RSA algoritmo = RSA.Create (BitsClave);
             try {
@@ -1013,14 +1085,17 @@ namespace com.mazc.Sistema {
 
 
         /// <summary>
-        /// Encripta con la clave pública el mensaje indicado y devuelve el resultado.
+        /// Encripta con la clave pública un mensaje y devuelve el resultado cifrado.
         /// </summary>
         /// <remarks>
         /// Se debe establecer previamente la clave pública medianta 'IniciaPublica'.
-        /// El tamaño máximo de 'mensaje' es 'MaximoBytesMensaje'.
+        /// El tamaño máximo del mensaje a encriptar es 'MaximoBytesMensaje'.
+        /// El buzón 'cifrado' puede ser vacío; en ese caso se crea un array de bytes de longitud 
+        /// 'BytesEncriptado' y se encapsula en el buzón. Si 'cifrado' no es vacío, su longitud debe 
+        /// ser 'BytesEncriptado'.
         /// </remarks>
-        /// <param name="mensaje">mensaje a encriptar</param>
-        /// <param name="cifrado">resultado de la enriptación</param>
+        /// <param name="mensaje">Mensaje a cifrar.</param>
+        /// <param name="cifrado">Buzon donde se copiará el mensaje cifrado, puede ser vacío o no.</param>
         internal void CifraPublica (Buzon mensaje, Buzon cifrado) {
             #if DEBUG
             Depuracion.Asevera (algoritmo != null);
@@ -1049,14 +1124,19 @@ namespace com.mazc.Sistema {
 
 
         /// <summary>
-        /// Desencripta 'cifrado' con la clave privada y devuelve el mensaje.
+        /// Desencripta un valor con la clave privada y devuelve el mensaje descifrado.
         /// </summary>
         /// <remarks>
         /// Se debe establecer previamente la clave privada medianta 'IniciaPrivada'.
-        /// El tamaño de 'cifrado es 'BytesEncriptado'.
+        /// El tamaño de 'cifrado' debe ser 'BytesEncriptado'.
+        /// El támaño de 'mensaje' es el del mensaje original. No puede ser mayor que 
+        /// 'MaximoBytesMensaje'.
+        /// El buzón 'mensaje' puede ser vacío; en ese caso se crea un array de bytes y se encapsula 
+        /// en el buzón. Si 'cifrado' no es vacío, su longitud debe ser suficiente para almacenar el
+        /// mensaje descifrado.
         /// </remarks>
-        /// <param name="cifrado">mensaje cifrado</param>
-        /// <param name="mensaje">mensaje descifrado</param>
+        /// <param name="cifrado">Mensaje cifrado.</param>
+        /// <param name="mensaje">Buzon donde se copiará el mensaje descifrado, puede ser vacío o no.</param>
         internal void DescifraPrivada (Buzon cifrado, Buzon mensaje) {
             #if DEBUG
             Depuracion.Asevera (algoritmo != null);

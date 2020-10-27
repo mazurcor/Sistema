@@ -68,7 +68,7 @@ namespace com.mazc.Sistema {
     /// 'Conexion' y la conecta con el servidor, el servidor crea otra instancia de 'Conexion', 
     /// llamada conexión de servicio. La conexión del cliente y la de servicio serán las que 
     /// intercambien los datos. El programa servidor puede atender a mas de un programa cliente, 
-    /// pero entonces, debe ser multi-hilo.
+    /// pero entonces debe ser multi-hilo.
     /// <para/>
     /// Usa la infraestructura de TCP/IP estandar del sistema. El programa servidor se configura 
     /// para usar un puerto TCP; el programa cliente indica la dirección IP y el puerto TCP del
@@ -166,7 +166,7 @@ namespace com.mazc.Sistema {
 
         /// <summary>
         /// Establece que la instancia se comunicará usando el canal seguro y asigna la clave 
-        /// privada del cifrado 'RSA' usada por el canal seguro. 
+        /// privada, del cifrado 'RSA', usada por el canal seguro. 
         /// </summary>
         /// <remarks>
         /// La instancia de cliente que se comunique con esta también deberá usar el canal seguro. 
@@ -176,7 +176,7 @@ namespace com.mazc.Sistema {
         /// La llamada se debe hacer en una conexión no iniciada. Cuando se inicie la conexión, debe 
         /// ser de servidor. Es decir, se debe hacer con 'IniciaServidor'.
         /// </remarks>
-        /// <param name="clave_privada">clave privada del cifrado 'RSA' usada por el canal seguro
+        /// <param name="clave_privada">clave privada del cifrado 'RSA', usada por el canal seguro
         /// </param>
         public void AseguraServidor (byte [] clave_privada) {
             #if DEBUG
@@ -190,7 +190,7 @@ namespace com.mazc.Sistema {
 
         /// <summary>
         /// Establece que la instancia se comunicará usando el canal seguro y asigna la clave 
-        /// pública del cifrado 'RSA' usada por el canal seguro. 
+        /// pública, del cifrado 'RSA', usada por el canal seguro. 
         /// </summary>
         /// <remarks>
         /// La instancia de servidor que se comunique con esta también deberá usar el canal seguro. 
@@ -200,7 +200,7 @@ namespace com.mazc.Sistema {
         /// La llamada se debe hacer en una conexión no iniciada. Cuando se inicie la conexión, debe 
         /// ser de cliente. Es decir, se debe hacer con 'IniciaCliente'.
         /// </remarks>
-        /// <param name="clave_privada">clave pública del cifrado 'RSA' usada por el canal seguro
+        /// <param name="clave_publica">clave pública del cifrado 'RSA', usada por el canal seguro
         /// </param>
         public void AseguraCliente (byte [] clave_publica) {
             #if DEBUG
