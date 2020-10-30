@@ -1,1 +1,126 @@
-probando
+
+
+
+
+
+
+
+
+
+MensajeBase
+
+        //  Mensaje a enviar.
+        //      buzón:
+        //          +---+---+---+---------------+
+        //          | b | i | l |               |
+        //          +---+---+---+---------------+
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+
+
+
+
+PrimerMensajeClaves
+
+        //  Mensaje a encriptar. 
+        //      buzón 'texto':
+        //          +---+---+
+        //          | s | p |
+        //          +---+---+
+        //      porciones de 'texto':
+        //          s: secreto
+        //          p: protocolo (dos bytes por caracter)
+        //
+        //  Mensaje a enviar. 
+        //      buzón 'mensaje':
+        //          +---+---+---+-------+
+        //          | b | i | l |   c   |
+        //          +---+---+---+-------+
+        //      porciones de 'mensaje':
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          c: cifrado (de texto)
+
+
+
+MensajeSimetrico
+
+        //  Mensaje a enviar.
+        //      buzón:
+        //          +---+---+---+-----------+---+
+        //          | b | i | l |     d     | a |
+        //          +---+---+---+-----------+---+
+        //      porción 'sensible':
+        //          +---+---+---+-----------+ · ·
+        //          | b | i | l |     d     |   ·
+        //          +---+---+---+-----------+ · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +-----------+---+
+        //          ·           |     d     | a |
+        //          · · · · · · +-----------+---+
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          d: datos
+        //          a: autentica
+
+
+
+MensajeSeguridad
+
+        //  Mensaje a enviar.
+        //      buzón 'mensaje':
+        //          +---+---+---+---+---+---+---+
+        //          | b | i | l | c | n | p | a |
+        //          +---+---+---+---+---+---+---+
+        //      porción 'sensible':
+        //          +---+---+---+---+---+---+ · ·
+        //          | b | i | l | c | n | p |   ·
+        //          +---+---+---+---+---+---+ · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +---+---+---+---+
+        //          ·           | c | n | p | a |
+        //          · · · · · · +---+---+---+---+
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          c: clave
+        //          n: numero
+        //          p: protocolo
+        //          a: autentica
+        //      observación:
+        //          clave, numero y protocolo pueden ser vacíos.
+
+
+
+MensajeGeneral
+
+        //  Mensaje a enviar.
+        //      buzón 'Conexion.BuzonMensaje':
+        //          +---+---+---+-----------+---+-----+
+        //          | b | i | l |     d     | a |     |
+        //          +---+---+---+-----------+---+-----+
+        //      porción 'sensible':
+        //          +---+---+---+-----------+ · · · · ·
+        //          | b | i | l |     d     |         ·
+        //          +---+---+---+-----------+ · · · · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +-----------+---+ · · ·
+        //          ·           |     d     | a |     ·
+        //          · · · · · · +-----------+---+ · · ·
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          d: 'Conexion.BuzonPaquete'
+        //          a: autentica
+        //      observación:
+        //          posible parte final del mensaje no usada
+
+
+

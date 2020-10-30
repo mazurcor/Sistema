@@ -130,7 +130,7 @@ namespace com.mazc.Sistema {
         // Reserva memoria para un array de bytes, lo encapsula en la instancia y copia el array de 
         // bytes 'datos' en él.
         // La instancia debe estar previamente vacía. 'datos' no puede tener longitud cero.
-        internal void ReservaCopia (byte [] datos) {
+        internal void ReservaYCopia (byte [] datos) {
             #if DEBUG
             Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
             Depuracion.Depura (datos == null, "'datos' nulo.");
@@ -152,7 +152,7 @@ namespace com.mazc.Sistema {
         // 'big-endian'. Por tanto, la longitud del array de bytes es el doble que la de la cadena 
         // de caracteres.
         // La instancia debe estar previamente vacía. 'datos' no puede tener longitud cero.
-        internal void ReservaCopia (string cadena) {
+        internal void ReservaYCopia (string cadena) {
             #if DEBUG
             Depuracion.Depura (this.almacen != null, "'Buzon' no vacío");
             Depuracion.Depura (cadena == null, "'cadena' nulo.");

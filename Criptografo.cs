@@ -104,7 +104,7 @@ namespace com.mazc.Sistema {
         /// <summary>
         /// Longitud en bytes de la clave de autenticación usada en el cálculo de los códigos HMAC.
         /// </summary>
-        internal const int BytesClave = 64;
+        //internal const int BytesClave = 64;
 
 
         #region variables privadas
@@ -119,7 +119,7 @@ namespace com.mazc.Sistema {
         /// autenticación.
         /// </summary>
         /// <remarks>
-        /// El tamaño de 'clave_SHA' debe ser 64 bytes. 
+        /// 'clave_SHA' puede ser de cualquier tamaño, pero el recomendado es 64 bytes. 
         /// Cada llamada a 'Inicia' debe tener la correspondiente llamada a 'Termina' (en un 'try', 
         /// 'finally').
         /// </remarks>
@@ -128,7 +128,7 @@ namespace com.mazc.Sistema {
             #if DEBUG
             Depuracion.Asevera (algoritmo == null);
             Depuracion.Asevera (clave_SHA != null);
-            Depuracion.Asevera (clave_SHA.Longitud == 64);
+            Depuracion.Asevera (clave_SHA.Longitud > 0);
             #endif
             //
             algoritmo = new HMACSHA256 (clave_SHA.Datos);

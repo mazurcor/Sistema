@@ -1149,82 +1149,6 @@ namespace com.mazc.Sistema {
         }
 
 
-        #endregion
-
-
-        #region métodos privados
-
-
-        // prepara los buzones para que admitan datos de la longitud indicada, los buzones crecen, 
-        // pero no disminuyen
-        private void PreparaBuzones (int longitud) {
-            // será	longitud > 0
-            //
-            // si se activó la seguridad (canal seguro) es ella quien prepara los buzones, 
-            // incluyendo 'buzon_paquete' y 'buzon_mensaje'
-            if (seguridad.Activa) {
-                seguridad.PreparaBuzones (longitud);
-                return;
-            }
-            //
-            if (buzon_paquete.Longitud == 0) {
-                buzon_mensaje.Reserva (longitud);
-                buzon_mensaje.ConstruyePorcion (0, longitud, buzon_paquete);
-                return;
-            }
-            if (buzon_paquete.Longitud < longitud) {
-                // se necesita hacer un buzon nuevo y cambiarlo por el antiguo
-                buzon_mensaje.AnulaPorcion (buzon_paquete);
-                Buzon nuevo = new Buzon ();
-                nuevo.Reserva (longitud);
-                if (paquete_entrada || paquete_salida) {
-                    Buzon.CopiaDatos (buzon_mensaje, nuevo, buzon_mensaje.Longitud);
-                }
-                buzon_mensaje.TrasponBuzon (nuevo);
-                buzon_mensaje.ConstruyePorcion (0, longitud, buzon_paquete);
-            }
-        }
-    
-
-        private String TomaStringBuzon (int posicion, int longitud) {
-            if (fabrica_cadena == null) {
-                fabrica_cadena = new StringBuilder ();
-            } else {
-                fabrica_cadena.Length = 0;
-            }
-            buzon_paquete.TomaString (posicion, longitud, fabrica_cadena);
-            return fabrica_cadena.ToString ();
-        }
-    
-    
-        // throws ErrorConexion 
-        private void EnviaConexion (int longitud) {
-            if (seguridad.Activa) {
-                seguridad.Envia (longitud);
-                return;
-            }
-		    EnviaSocket (buzon_mensaje, longitud);
-        }      
-
-
-        // throws ErrorConexion, ConexionInterrumpida 
-        private void RecibeConexion (int posicion, int longitud) {
-            // 'Conexion' hace dos llamadas a este método, la primera para recibir la cabecera del 
-            // mensaje, que incluye su longitud, y la segunda para obtener el resto del mensaje. La 
-            // primera llamada se hace con 'posicion' igual a cero, y la segunda distinto de cero.
-            // 'Seguridad' encapsula el mensaje en su propio formato y debe desencriptar el mensaje 
-            // completo. Por eso recibe el mensaje completo en la primera llamada, con 'posicion' igual 
-            // a cero, e ignora la segunda llamada y además ignora 'longitud'.
-            if (seguridad.Activa) {
-                if (posicion == 0) {
-                    seguridad.Recibe ();
-                }
-                return;
-            }
-		    RecibeSocket (buzon_mensaje, posicion, longitud);
-        }      
-
-
         internal void EnviaSocket (in Buzon buzon, int longitud) {
             int posicion = buzon.Inicio;
             // puede ocurrir que no se envien de una vez todos los bytes pedidos
@@ -1289,7 +1213,109 @@ namespace com.mazc.Sistema {
         #endregion
 
 
+        #region métodos privados
+
+
+        // prepara los buzones para que admitan datos de la longitud indicada, los buzones crecen, 
+        // pero no disminuyen
+        private void PreparaBuzones (int longitud) {
+            // será	longitud > 0
+            //
+            // si se activó la seguridad (canal seguro) es ella quien prepara los buzones, 
+            // incluyendo 'buzon_paquete' y 'buzon_mensaje'
+            // en este caso, longitud es longitud_paquete
+            if (seguridad.Activa) {
+                seguridad.PreparaBuzones (longitud);
+                return;
+            }
+            //
+            if (buzon_paquete.Longitud == 0) {
+                buzon_mensaje.Reserva (longitud);
+                buzon_mensaje.ConstruyePorcion (0, longitud, buzon_paquete);
+                return;
+            }
+            if (buzon_paquete.Longitud < longitud) {
+                // se necesita hacer un buzon nuevo y cambiarlo por el antiguo
+                buzon_mensaje.AnulaPorcion (buzon_paquete);
+                Buzon nuevo = new Buzon ();
+                nuevo.Reserva (longitud);
+                if (paquete_entrada || paquete_salida) {
+                    Buzon.CopiaDatos (buzon_mensaje, nuevo, buzon_mensaje.Longitud);
+                }
+                buzon_mensaje.TrasponBuzon (nuevo);
+                buzon_mensaje.ConstruyePorcion (0, longitud, buzon_paquete);
+            }
+        }
+    
+
+        private String TomaStringBuzon (int posicion, int longitud) {
+            if (fabrica_cadena == null) {
+                fabrica_cadena = new StringBuilder ();
+            } else {
+                fabrica_cadena.Length = 0;
+            }
+            buzon_paquete.TomaString (posicion, longitud, fabrica_cadena);
+            return fabrica_cadena.ToString ();
+        }
+    
+    
+        // throws ErrorConexion 
+        private void EnviaConexion (int longitud) {
+            if (seguridad.Activa) {
+                seguridad.Envia (longitud);
+                return;
+            }
+		    EnviaSocket (buzon_mensaje, longitud);
+        }      
+
+
+        // throws ErrorConexion, ConexionInterrumpida 
+        private void RecibeConexion (int posicion, int longitud) {
+            // 'Conexion' hace dos llamadas a este método, la primera para recibir la cabecera del 
+            // mensaje, que incluye su longitud, y la segunda para obtener el resto del mensaje. La 
+            // primera llamada se hace con 'posicion' igual a cero, y la segunda distinto de cero.
+            // 'Seguridad' encapsula el mensaje en su propio formato y debe desencriptar el mensaje 
+            // completo. Por eso recibe el mensaje completo en la primera llamada, con 'posicion' igual 
+            // a cero, e ignora la segunda llamada y además ignora 'longitud'.
+            if (seguridad.Activa) {
+                if (posicion == 0) {
+                    seguridad.Recibe ();
+                }
+                return;
+            }
+		    RecibeSocket (buzon_mensaje, posicion, longitud);
+        }      
+
+
+        #endregion
+
+
     }
 
 
 }
+
+
+
+
+        //  Mensaje a enviar.
+        //      buzón 'Conexion.BuzonMensaje':
+        //          +---+---+---+---+---+-----+
+        //          | b | i | l | p | a |     |
+        //          +---+---+---+---+---+-----+
+        //      porción 'sensible':
+        //          +---+---+---+---+ · · · · ·
+        //          | b | i | l | p |         ·
+        //          +---+---+---+---+ · · · · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +---+---+ · · ·
+        //          ·           | p | a |     ·
+        //          · · · · · · +---+---+ · · ·
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          p: 'Conexion.BuzonPaquete'
+        //          a: autentica
+        //      observación:
+        //          posible parte final del mensaje no usada

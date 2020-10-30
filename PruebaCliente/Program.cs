@@ -54,12 +54,6 @@ namespace PruebaCliente {
                 conexion.AgregaString ("Adiós");
                 conexion.EnviaPaquete ();
                 //
-//int r;
-//std::cin >> r;
-
-//                int i = conexion.RecibeInteger ();
-
-                //
                 string s;
                 s = "primer envio";
                 conexion.EnviaString (s);

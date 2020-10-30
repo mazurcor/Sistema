@@ -6,16 +6,66 @@ using System.Text;
 namespace com.mazc.Sistema {
 
 
-
-    // Clase que prepara el primer mensajes de establecimiento de secreto. Encriptado con RSA.
-    internal sealed class PrimerMensajeClaves {
+    // Clase base de las clases que preparan los mensajes
+    internal class MensajeBase {
 
 
         #region variables privadas
 
         // instancias que están usando este mensaje;
-        private Seguridad seguridad;
-        private Conexion  conexion;
+        protected Seguridad seguridad;
+        protected Conexion  conexion;
+
+        //  Mensaje a enviar.
+        //      buzón:
+        //          +---+---+---+---------------+
+        //          | b | i | l |               |
+        //          +---+---+---+---------------+
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+
+        protected const int bytes_billete  = sizeof (long);
+        protected const int bytes_indice   = sizeof (int);
+        protected const int bytes_longitud = sizeof (int);
+        protected const int bytes_cabecera = bytes_billete + bytes_indice + bytes_longitud; 
+
+        protected Buzon buzon_billete;
+        protected Buzon buzon_indice;
+        protected Buzon buzon_longitud;
+
+        #endregion
+
+
+        protected MensajeBase (Seguridad seguridad_) {
+            this.seguridad = seguridad_;
+            this.conexion  = seguridad_.Conexion;
+            //
+            buzon_billete  = new Buzon ();
+            buzon_indice   = new Buzon ();
+            buzon_longitud = new Buzon ();
+        }
+
+
+        protected void PreparaCabecera (Buzon buzon_mensaje) {
+            int inicio_billete  = 0;
+            int inicio_indice   = bytes_billete;
+            int inicio_longitud = bytes_billete + bytes_indice;
+            buzon_mensaje.ConstruyePorcion (inicio_billete,  bytes_billete,  buzon_billete);
+            buzon_mensaje.ConstruyePorcion (inicio_indice,   bytes_indice,   buzon_indice);
+            buzon_mensaje.ConstruyePorcion (inicio_longitud, bytes_longitud, buzon_longitud);
+        }
+
+
+    }
+
+
+    // Clase que prepara el primer mensajes de establecimiento de secreto. Encriptado con RSA.
+    internal sealed class PrimerMensajeClaves : MensajeBase {
+
+
+        #region variables privadas
 
         //  Mensaje a encriptar. 
         //      buzón 'texto':
@@ -28,90 +78,79 @@ namespace com.mazc.Sistema {
         //
         //  Mensaje a enviar. 
         //      buzón 'mensaje':
-        //          +---+---+---+---+
-        //          | b | i | l | c |
-        //          +---+---+---+---+
+        //          +---+---+---+-------+
+        //          | b | i | l |   c   |
+        //          +---+---+---+-------+
         //      porciones de 'mensaje':
         //          b: billete
         //          i: indice
         //          l: longitud
         //          c: cifrado (de texto)
 
-        private Buzon texto;
-        private Buzon secreto;
-        private Buzon protocolo;
+        private const int bytes_secreto   = Seguridad.longitud_secreto;
+        private       int bytes_protocolo;
+        private       int bytes_texto;
 
-        private Buzon mensaje;
-        private Buzon billete;
-        private Buzon indice;
-        private Buzon longitud;
-        private Buzon cifrado;
+        private Buzon buzon_texto;
+        private Buzon buzon_secreto;
+        private Buzon buzon_protocolo;
+
+        private const int bytes_cifrado = CifradoRSA.BytesEncriptado;
+        private const int bytes_mensaje = bytes_cabecera + bytes_cifrado;
+            
+        private Buzon buzon_mensaje;
+        private Buzon buzon_cifrado;
 
         #endregion
 
 
-        internal PrimerMensajeClaves (Seguridad seguridad_) {
+        internal PrimerMensajeClaves (Seguridad seguridad_) : 
+                base (seguridad_) {
             Depuracion.Asevera (! seguridad_.DeServidor);
             //
-            Plantea ();
+            Prepara ();
         }
 
 
         // prepara los buzones
-        private void Plantea () {
-            int bytes_secreto    = Seguridad.bytes_secreto;
-            int bytes_protocolo  = seguridad.protocolo.Longitud;
-            int bytes_texto      = bytes_secreto + bytes_protocolo;
-            int inicio_secreto   = 0;
-            int inicio_protocolo = inicio_secreto + bytes_secreto;
+        private void Prepara () {
+            bytes_protocolo  = Seguridad.protocolo.Longitud;
+            bytes_texto      = bytes_secreto + bytes_protocolo;
             //
-            this.texto = new Buzon ();
-            this.texto.Reserva (bytes_texto);
-            this.secreto   = new Buzon ();
-            this.protocolo = new Buzon ();
-            this.texto.ConstruyePorcion (inicio_secreto,   bytes_secreto,   this.secreto);
-            this.texto.ConstruyePorcion (inicio_protocolo, bytes_protocolo, this.protocolo);
+            buzon_texto     = new Buzon ();
+            buzon_secreto   = new Buzon ();
+            buzon_protocolo = new Buzon ();
             //
-            int bytes_billete   = sizeof (long);
-            int bytes_indice    = sizeof (int);
-            int bytes_longitud  = sizeof (int);
-            int bytes_cifrado   = CifradoRSA.BytesEncriptado;
-            int bytes_mensaje   = bytes_billete + bytes_indice + bytes_longitud + bytes_cifrado;
-            int inicio_billete  = 0;
-            int inicio_indice   = inicio_billete  + bytes_billete;
-            int inicio_longitud = inicio_indice   + bytes_indice;
-            int inicio_cifrado  = inicio_longitud + bytes_longitud;
+            buzon_texto.Reserva (bytes_texto);
+            buzon_texto.ConstruyePorcion (            0, bytes_secreto,   buzon_secreto);
+            buzon_texto.ConstruyePorcion (bytes_secreto, bytes_protocolo, buzon_protocolo);
             //
-            this.mensaje = new Buzon ();
-            this.mensaje.Reserva (bytes_mensaje);
-            this.billete  = new Buzon ();
-            this.indice   = new Buzon ();
-            this.longitud = new Buzon ();
-            this.cifrado  = new Buzon ();
-            this.mensaje.ConstruyePorcion (inicio_billete,  bytes_billete,  this.billete);
-            this.mensaje.ConstruyePorcion (inicio_indice,   bytes_indice,   this.indice);
-            this.mensaje.ConstruyePorcion (inicio_longitud, bytes_longitud, this.longitud);
-            this.mensaje.ConstruyePorcion (inicio_cifrado,  bytes_cifrado,  this.cifrado);
+            buzon_mensaje = new Buzon ();
+            buzon_cifrado = new Buzon ();
+            //
+            buzon_mensaje.Reserva (bytes_mensaje);
+            PreparaCabecera (buzon_mensaje);
+            buzon_mensaje.ConstruyePorcion (bytes_cabecera,  bytes_cifrado,  buzon_cifrado);
         }
 
 
         // envia el mensaje (desde el servicio)
         internal void Envia (Buzon secreto_) {
-            Buzon.CopiaDatos (secreto_, this.secreto);
-            Buzon.CopiaDatos (seguridad.protocolo, this.protocolo);
-            this.billete  .PonInt (0, 0);
-            this.indice   .PonInt (0, 0);
-            this.longitud .PonInt (0, mensaje.Longitud);
+            Buzon.CopiaDatos (secreto_, this.buzon_secreto);
+            Buzon.CopiaDatos (Seguridad.protocolo, this.buzon_protocolo);
+            buzon_billete .PonInt (0, 0);
+            buzon_indice  .PonInt (0, 0);
+            buzon_longitud.PonInt (0, buzon_mensaje.Longitud);
             //
             CifradoRSA cifrado_RSA = new CifradoRSA ();
             try {
                 cifrado_RSA.IniciaPublica (seguridad.clave_publica);
-                cifrado_RSA.CifraPublica (texto, cifrado);
+                cifrado_RSA.CifraPublica (buzon_texto, buzon_cifrado);
             } finally { 
                 cifrado_RSA.Termina ();
             } 
             //
-            conexion.EnviaSocket (mensaje, mensaje.Longitud);
+            conexion.EnviaSocket (buzon_mensaje, buzon_mensaje.Longitud);
             //
 //            seguridad.ImprimeEnvia (billete, indice, longitud, "RSA ( S1 | protocolo )");
         }
@@ -119,30 +158,30 @@ namespace com.mazc.Sistema {
 
         // recibe el mensaje (en el cliente)
         internal void Recibe (out Buzon secreto_) {
-            conexion.RecibeSocket (mensaje, 0, mensaje.Longitud);
+            conexion.RecibeSocket (buzon_mensaje, 0, buzon_mensaje.Longitud);
             //
 //            seguridad.ImprimeRecibe (billete, indice, longitud, "RSA ( S1 | protocolo )");
             //
             // se valida el mensaje
-            if (billete .TomaInt (0) != 0 ||
-                indice  .TomaInt (0) != 0 ||
-                longitud.TomaInt (0) != mensaje.Longitud) {
+            if (buzon_billete .TomaInt (0) != 0 ||
+                buzon_indice  .TomaInt (0) != 0 ||
+                buzon_longitud.TomaInt (0) != buzon_mensaje.Longitud) {
                 throw new ErrorConexion ("Violación del protocolo de seguridad.");
             }
             //
             CifradoRSA cifrado_RSA = new CifradoRSA ();
             try {
                 cifrado_RSA.IniciaPrivada (seguridad.seguridad_servidor.clave_privada);
-                cifrado_RSA.DescifraPrivada (cifrado, texto);
+                cifrado_RSA.DescifraPrivada (buzon_cifrado, buzon_texto);
             } finally { 
                 cifrado_RSA.Termina ();
             }
             //
-            if (! Buzon.DatosIguales (this.protocolo, seguridad.protocolo)) {
+            if (! Buzon.DatosIguales (this.buzon_protocolo, Seguridad.protocolo)) {
                 throw new ErrorConexion ("Protocolo de seguridad inconsistente.");
             }
             //
-            secreto_ = this.secreto;
+            secreto_ = this.buzon_secreto;
         }
 
 
@@ -150,35 +189,170 @@ namespace com.mazc.Sistema {
 
 
     // Clase base de preparación de los mensajes encriptados con AES.
-    internal class MensajeBase {
+    internal class MensajeSimetrico : MensajeBase {
 
 
         #region variables protegidas
 
-        // instancias que están usando este mensaje;
-        protected Seguridad seguridad;
-        protected Conexion  conexion;
+        //  Mensaje a enviar.
+        //      buzón:
+        //          +---+---+---+-----------+---+
+        //          | b | i | l |     d     | a |
+        //          +---+---+---+-----------+---+
+        //      porción 'sensible':
+        //          +---+---+---+-----------+ · ·
+        //          | b | i | l |     d     |   ·
+        //          +---+---+---+-----------+ · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +-----------+---+
+        //          ·           |     d     | a |
+        //          · · · · · · +-----------+---+
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          d: datos
+        //          a: autentica
+
+        protected const int bytes_autentica = CalculoHMAC.BytesValor;
+        protected       int bytes_sensible;
+        protected       int bytes_cifrado;
+
+        protected Buzon buzon_autentica;
+        protected Buzon buzon_sensible;
+        protected Buzon buzon_cifrado;
 
         #endregion
 
 
-        internal MensajeBase (Seguridad seguridad_) {
-            this.seguridad = seguridad_;
-            this.conexion  = seguridad_.Conexion;
+        internal MensajeSimetrico (Seguridad seguridad_) : 
+                base (seguridad_) {
+            buzon_autentica = new Buzon ();
+            buzon_sensible  = new Buzon ();
+            buzon_cifrado   = new Buzon ();
+        }
+
+
+        protected void PreparaGrupos (Buzon buzon_mensaje, int bytes_datos) {
+            bytes_sensible = bytes_cabecera + bytes_datos;
+            bytes_cifrado =  bytes_datos + bytes_autentica;
+            //            
+            int inicio_sensible  = 0;
+            int inicio_cifrado   = bytes_cabecera;
+            int inicio_autentica = bytes_cabecera + bytes_datos;
+            //
+            buzon_mensaje.ConstruyePorcion (inicio_sensible,  bytes_sensible,  buzon_sensible); 
+            buzon_mensaje.ConstruyePorcion (inicio_cifrado,   bytes_cifrado,   buzon_cifrado);
+            buzon_mensaje.ConstruyePorcion (inicio_autentica, bytes_autentica, buzon_autentica);
+        }
+
+        internal void AutenticaCifra (Buzon buzon_sensible, Buzon buzon_autentica, Buzon buzon_cifrado) {
+        }
+
+
+        internal void DescifraVerifica (Buzon buzon_sensible, Buzon buzon_autentica, Buzon buzon_cifrado) {
         }
 
 
     }
 
 
-    // Clase que prepara el primer mensajes de establecimiento de billete. Derivada de 
-    // 'MensajaeBase' por ser encriptados con AES.
-    internal sealed class PrimerMensajeBillete : 
-            MensajeBase {
+    // Clase que prepara un mensaje del protocolo de seguridad (establecimiento de clave o de 
+    // billete). 
+    // Hay algunas variantes de este mensaje, según el contenido.
+    // Derivada de 'MensajeSimetrico' por ser encriptados con AES.
+    // 
+    internal sealed class MensajeSeguridad : MensajeSimetrico {
 
 
-        internal PrimerMensajeBillete (Seguridad seguridad_) :
+        #region variables privadas
+
+        //  Mensaje a enviar.
+        //      buzón 'mensaje':
+        //          +---+---+---+---+---+---+---+
+        //          | b | i | l | c | n | p | a |
+        //          +---+---+---+---+---+---+---+
+        //      porción 'sensible':
+        //          +---+---+---+---+---+---+ · ·
+        //          | b | i | l | c | n | p |   ·
+        //          +---+---+---+---+---+---+ · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +---+---+---+---+
+        //          ·           | c | n | p | a |
+        //          · · · · · · +---+---+---+---+
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          c: clave
+        //          n: numero
+        //          p: protocolo
+        //          a: autentica
+        //      observación:
+        //          clave, numero y protocolo pueden ser vacíos.
+
+        private int bytes_clave;
+        private int bytes_numero;
+        private int bytes_protocolo;
+        private int bytes_datos;
+        private int bytes_mensaje;
+
+        private Buzon buzon_mensaje;
+        private Buzon buzon_clave;
+        private Buzon buzon_numero;
+        private Buzon buzon_protocolo;
+
+        // otros buzones en el base
+
+        #endregion
+
+
+        internal MensajeSeguridad (Seguridad seguridad_) :
                 base (seguridad_) {
+            Prepara ();
+        }
+
+
+        private void Prepara () {
+            bytes_clave     = 0;
+            bytes_numero    = 0;
+            bytes_protocolo = 0;
+            if (true) {
+                bytes_clave     = Seguridad.longitud_secreto;
+            }
+            if (true) {
+                bytes_numero    = bytes_billete;
+            }
+            if (true) {
+                bytes_protocolo = Seguridad.protocolo.Longitud;
+            }
+            //
+            bytes_datos = bytes_clave + bytes_numero + bytes_protocolo;
+            //
+            int inicio_clave     = bytes_cabecera;
+            int inicio_numero    = inicio_clave  + bytes_clave;
+            int inicio_protocolo = inicio_numero + bytes_numero;
+            //
+            bytes_mensaje = bytes_cabecera + bytes_datos + bytes_autentica;
+            //
+            buzon_mensaje   = new Buzon ();
+            buzon_clave     = new Buzon ();
+            buzon_numero    = new Buzon ();
+            buzon_protocolo = new Buzon ();
+            //
+            buzon_mensaje.Reserva (bytes_mensaje);
+            PreparaCabecera (buzon_mensaje);
+            if (true) {
+                buzon_mensaje.ConstruyePorcion (inicio_clave,     bytes_clave,     buzon_clave);
+            }
+            if (true) {
+                buzon_mensaje.ConstruyePorcion (inicio_numero,    bytes_numero,    buzon_numero);
+            }
+            if (true) {
+                buzon_mensaje.ConstruyePorcion (inicio_protocolo, bytes_protocolo, buzon_protocolo);
+            }
+            //
+            PreparaGrupos (buzon_mensaje, bytes_datos);
         }
 
 
@@ -196,14 +370,37 @@ namespace com.mazc.Sistema {
 
 
     // Clase que prepara los mensajes generales de envío y recepción de datos. Derivada de 
-    // 'MensajaeBase' por ser encriptados con AES.
-    internal sealed class MensajeGeneral : 
-            MensajeBase {
+    // 'MensajeSimetrico' por ser encriptados con AES.
+    // 
+    internal sealed class MensajeGeneral : MensajeSimetrico {
 
 
         #region variables privadas
 
+        //  Mensaje a enviar.
+        //      buzón 'Conexion.BuzonMensaje':
+        //          +---+---+---+-----------+---+-----+
+        //          | b | i | l |     p     | a |     |
+        //          +---+---+---+-----------+---+-----+
+        //      porción 'sensible':
+        //          +---+---+---+-----------+ · · · · ·
+        //          | b | i | l |     p     |         ·
+        //          +---+---+---+-----------+ · · · · ·
+        //      porción 'cifrado':       
+        //          · · · · · · +-----------+---+ · · ·
+        //          ·           |     p     | a |     ·
+        //          · · · · · · +-----------+---+ · · ·
+        //      porciones:
+        //          b: billete
+        //          i: indice
+        //          l: longitud
+        //          p: 'Conexion.BuzonPaquete'
+        //          a: autentica
+        //      observación:
+        //          posible parte final del mensaje no usada
 
+        private int bytes_paquete;
+        private int bytes_mensaje;
 
         #endregion
 
@@ -212,37 +409,114 @@ namespace com.mazc.Sistema {
                 base (seguridad_) {
         }
 
-        internal void Envia () {
-            throw new NotImplementedException ();
+
+        internal void PreparaBuzones (int longitud_paquete) {  
+            bytes_paquete = longitud_paquete;
+            bytes_mensaje = bytes_cabecera + bytes_paquete + bytes_autentica;
+            //
+            if (conexion.BuzonMensaje.Longitud == 0) {
+			    conexion.BuzonMensaje.Reserva (bytes_mensaje);
+                ConstruyeBuzones ();
+			    return;
+		    }
+		    if (conexion.BuzonMensaje.Longitud < bytes_mensaje) {
+                AnulaBuzones ();
+                Buzon nuevo = new Buzon ();
+                nuevo.Reserva (bytes_mensaje);
+			    //if (conexion.paquete_entrada || 
+       //             conexion.paquete_salida    ) {
+                    Buzon.CopiaDatos (conexion.BuzonMensaje, nuevo, conexion.BuzonMensaje.Longitud);
+			    //}
+                conexion.BuzonMensaje.TrasponBuzon (nuevo);
+                ConstruyeBuzones ();
+                return;
+		    }
+            ReestableceBuzones ();
         }
+
+
+        private void ConstruyeBuzones () {
+            PreparaCabecera (conexion.BuzonMensaje);
+            conexion.BuzonMensaje.ConstruyePorcion (bytes_cabecera, bytes_paquete, conexion.BuzonPaquete);
+            PreparaGrupos (conexion.BuzonMensaje, bytes_paquete);
+        }
+
+
+        private void AnulaBuzones () {
+            conexion.BuzonMensaje.AnulaPorcion (buzon_billete);
+            conexion.BuzonMensaje.AnulaPorcion (buzon_indice);
+            conexion.BuzonMensaje.AnulaPorcion (buzon_longitud);
+            conexion.BuzonMensaje.AnulaPorcion (conexion.BuzonPaquete);
+            conexion.BuzonMensaje.AnulaPorcion (buzon_autentica);
+            conexion.BuzonMensaje.AnulaPorcion (buzon_sensible);
+            conexion.BuzonMensaje.AnulaPorcion (buzon_cifrado);
+        }
+
+
+        private void ReestableceBuzones () {
+            int medida = bytes_paquete - conexion.BuzonPaquete.Longitud;
+            conexion.BuzonMensaje.RedimensionaPorcion (conexion.BuzonPaquete, medida);
+            conexion.BuzonMensaje.ResituaPorcion      (buzon_autentica,       medida);
+            conexion.BuzonMensaje.RedimensionaPorcion (buzon_sensible,        medida);
+            conexion.BuzonMensaje.RedimensionaPorcion (buzon_cifrado,         medida);
+        }
+
+
+        internal void Envia () {
+            buzon_billete .PonLong (0, seguridad.contador_CTR_local.NumeroSerie);  
+            buzon_indice  .PonInt  (0, seguridad.contador_CTR_local.NumeroMensaje);
+            buzon_longitud.PonInt  (0, bytes_mensaje);
+            //
+            base.AutenticaCifra (buzon_sensible, buzon_autentica, buzon_cifrado);
+            //
+            conexion.EnviaSocket (conexion.BuzonMensaje, bytes_mensaje);
+            //
+            //seguridad.ImprimeEnvia (this.billete, this.indice, this.longitud, "AES ( t | a )");
+       }
+
 
         internal void Recibe () {
-            throw new NotImplementedException ();
+            int bytes_cabecera = bytes_billete +
+                                 bytes_indice +
+                                 bytes_longitud;
+            conexion.RecibeSocket (conexion.BuzonMensaje, 0, bytes_cabecera);
+            //
+            // se valida el mensaje
+            if (buzon_billete .TomaLong (0) != seguridad.contador_CTR_remoto.NumeroSerie   ||
+                buzon_indice  .TomaInt  (0) != seguridad.contador_CTR_remoto.NumeroMensaje   ) {
+                // ¿que hacer????
+                return;
+            }
+            //
+            // validar resto:
+            int bytes_resto   = buzon_longitud.TomaInt (0) - bytes_cabecera;
+            int bytes_paquete = bytes_resto - CalculoHMAC.BytesValor;
+            //
+            PreparaBuzones (bytes_paquete);
+            //
+            conexion.RecibeSocket (conexion.BuzonMensaje, bytes_cabecera, bytes_resto);
+            //
+            //seguridad.ImprimeRecibe (buzon_billete, buzon_indice, buzon_longitud, "AES ( t | a )");
+            //
+            base.DescifraVerifica (buzon_sensible, buzon_autentica, buzon_cifrado);       
         }
 
-        internal void PreparaBuzones (int longitud) {
-            throw new NotImplementedException ();
-        }
+
     }
 
 
     internal sealed class Seguridad {
 
 
-        #region constantes privadas
+        #region variables y constantes internas y privadas 
 
         // el cliente envia al servidor un valor secreto a partir del cual se crean las dos claves 
-        // de encriptación y las dos de autenticación, este valor secreto es de 64 bytes ¿por qué?
-        internal const int bytes_secreto = 64;
+        // de encriptación y las dos de autenticación, este valor secreto es de 32 bytes
+        internal const int longitud_secreto = 32;
 
         // el cliente envia al servidor un literal que indica el protocolo de seguridad que se está
         // usando, el servidor valida que coincidan
-        private const string literal_protocolo = "com.mazc 0.2";
-
-        #endregion
-
-
-        #region variables privadas 
+        static internal Buzon protocolo;
 
         // es la instancia que contiene a esta
         private Conexion conexion;
@@ -253,9 +527,6 @@ namespace com.mazc.Sistema {
         private bool de_servidor; 
 		private bool de_servicio;
 		private bool de_cliente;
-
-        // contiene el literal del protocolo
-        internal Buzon protocolo;
 
         // almacena la clave privada, solo en servidor
         internal Buzon clave_privada;
@@ -269,8 +540,8 @@ namespace com.mazc.Sistema {
         // genera los bloque de datos (contadores) usados para encriptar;
         // el contador local de este programa se empareja con el contador remoto del programa remoto 
         // (coinciden los números)
-        private ContadorCTR contador_CTR_local;
-        private ContadorCTR contador_CTR_remoto;
+        internal ContadorCTR contador_CTR_local;
+        internal ContadorCTR contador_CTR_remoto;
 
         // encripta usando AES y una de las claves de encriptación; 
         // el encriptador local de este programa se empareja con el encriptador remoto del programa 
@@ -290,6 +561,12 @@ namespace com.mazc.Sistema {
         #endregion
 
 
+        static Seguridad () {
+            protocolo = new Buzon ();
+            protocolo.ReservaYCopia ("com.mazc 0.2");
+        }
+
+
         internal Seguridad (Conexion conexion_) {
             this.conexion = conexion_;
         }
@@ -299,10 +576,8 @@ namespace com.mazc.Sistema {
             activa      = true;
             de_servidor = true;
             //
-            protocolo = new Buzon ();
-            protocolo.ReservaCopia (literal_protocolo);
             this.clave_privada = new Buzon ();
-            this.clave_privada.ReservaCopia (clave_privada_);
+            this.clave_privada.ReservaYCopia (clave_privada_);
         }
 
 
@@ -325,10 +600,8 @@ namespace com.mazc.Sistema {
             activa     = true;
             de_cliente = true;
             //
-            protocolo = new Buzon ();
-            protocolo.ReservaCopia (literal_protocolo);
             this.clave_publica = new Buzon ();
-            this.clave_publica.ReservaCopia (clave_publica_);
+            this.clave_publica.ReservaYCopia (clave_publica_);
             //
             contador_CTR_local  = new ContadorCTR ();
             contador_CTR_remoto = new ContadorCTR ();
@@ -431,7 +704,7 @@ namespace com.mazc.Sistema {
             mensaje_claves.Envia (secreto);
             EstableceCripto (secreto);
             //
-            PrimerMensajeBillete mensaje_billete = new PrimerMensajeBillete (this);
+            MensajeSeguridad mensaje_billete = new MensajeSeguridad (this);
             long billete = mensaje_billete.Recibe ();
             //
             contador_CTR_local .CambiaSerie (billete);
@@ -447,7 +720,7 @@ namespace com.mazc.Sistema {
             mensaje_claves.Recibe (out secreto);
             EstableceCripto (secreto);
             //
-            PrimerMensajeBillete mensaje_billete = new PrimerMensajeBillete (this);
+            MensajeSeguridad mensaje_billete = new MensajeSeguridad (this);
             long billete = GeneraBillete (0);
             mensaje_billete.Envia (billete);
             //
@@ -458,7 +731,7 @@ namespace com.mazc.Sistema {
 
         private Buzon GeneraSecreto () {
             Buzon secreto = new Buzon ();
-            secreto.Reserva (bytes_secreto);
+            secreto.Reserva (Seguridad.longitud_secreto);
             Aleatorio aleatorio = new Aleatorio ();
             try {
                 aleatorio.Inicia ();
@@ -490,7 +763,8 @@ namespace com.mazc.Sistema {
 
 
         private void EstableceCripto (Buzon secreto) {
-            Depuracion.Asevera (CifradoAES.BytesClave == CalculoHMAC.BytesValor);
+            Depuracion.Asevera (Seguridad.longitud_secreto == CifradoAES.BytesClave);
+            Depuracion.Asevera (CifradoAES.BytesClave      == CalculoHMAC.BytesValor);
             //
             cifrado_AES_local   = new CifradoAES ();
             cifrado_AES_remoto  = new CifradoAES ();
@@ -505,15 +779,15 @@ namespace com.mazc.Sistema {
 
 
         private void EstableceCripto (Buzon secreto, bool encripta, bool cliente, string funcion) {
-            Buzon salt = new Buzon ();
-            salt.ReservaCopia (funcion);
+            Buzon mensaje = new Buzon ();
+            mensaje.ReservaYCopia (funcion);
             Buzon clave = new Buzon ();
-            clave.Reserva (CifradoAES.BytesClave);
+            clave.Reserva (Seguridad.longitud_secreto);
             //
             CalculoHMAC calculo_HMAC = new CalculoHMAC ();
             try {
-                calculo_HMAC.Inicia (salt);
-                calculo_HMAC.Calcula (secreto, clave);
+                calculo_HMAC.Inicia (secreto);
+                calculo_HMAC.Calcula (mensaje, clave);
             } finally {
                 calculo_HMAC.Termina ();
             }
