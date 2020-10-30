@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------------------------
 // archivo:     Sistema/Criptografo.cs
-// versión:     28-Oct-2020, terminado, documentado.
+// versión:     28-Oct-2020, terminado, comentado.
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------

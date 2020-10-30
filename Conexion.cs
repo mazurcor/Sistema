@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------------------------
 // archivo:     Sistema/Conexion.cs
-// versión:     18-Oct-2020
+// versión:     18-Oct-2020, terminado, comentado
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
 //------------------------------------------------------------------------------
@@ -1294,28 +1294,3 @@ namespace com.mazc.Sistema {
 
 
 }
-
-
-
-
-        //  Mensaje a enviar.
-        //      buzón 'Conexion.BuzonMensaje':
-        //          +---+---+---+---+---+-----+
-        //          | b | i | l | p | a |     |
-        //          +---+---+---+---+---+-----+
-        //      porción 'sensible':
-        //          +---+---+---+---+ · · · · ·
-        //          | b | i | l | p |         ·
-        //          +---+---+---+---+ · · · · ·
-        //      porción 'cifrado':       
-        //          · · · · · · +---+---+ · · ·
-        //          ·           | p | a |     ·
-        //          · · · · · · +---+---+ · · ·
-        //      porciones:
-        //          b: billete
-        //          i: indice
-        //          l: longitud
-        //          p: 'Conexion.BuzonPaquete'
-        //          a: autentica
-        //      observación:
-        //          posible parte final del mensaje no usada
