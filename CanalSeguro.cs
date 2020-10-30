@@ -246,11 +246,11 @@ namespace com.mazc.Sistema {
             buzon_mensaje.ConstruyePorcion (inicio_autentica, bytes_autentica, buzon_autentica);
         }
 
-        internal void AutenticaCifra (Buzon buzon_sensible, Buzon buzon_autentica, Buzon buzon_cifrado) {
+        internal void AutenticaCifra () {
         }
 
 
-        internal void DescifraVerifica (Buzon buzon_sensible, Buzon buzon_autentica, Buzon buzon_cifrado) {
+        internal void DescifraVerifica () {
         }
 
 
@@ -326,19 +326,17 @@ namespace com.mazc.Sistema {
             if (true) {
                 bytes_protocolo = Seguridad.protocolo.Longitud;
             }
-            //
-            bytes_datos = bytes_clave + bytes_numero + bytes_protocolo;
-            //
-            int inicio_clave     = bytes_cabecera;
-            int inicio_numero    = inicio_clave  + bytes_clave;
-            int inicio_protocolo = inicio_numero + bytes_numero;
-            //
+            bytes_datos   = bytes_clave + bytes_numero + bytes_protocolo;
             bytes_mensaje = bytes_cabecera + bytes_datos + bytes_autentica;
             //
             buzon_mensaje   = new Buzon ();
             buzon_clave     = new Buzon ();
             buzon_numero    = new Buzon ();
             buzon_protocolo = new Buzon ();
+            //
+            int inicio_clave     = bytes_cabecera;
+            int inicio_numero    = inicio_clave  + bytes_clave;
+            int inicio_protocolo = inicio_numero + bytes_numero;
             //
             buzon_mensaje.Reserva (bytes_mensaje);
             PreparaCabecera (buzon_mensaje);
@@ -351,7 +349,6 @@ namespace com.mazc.Sistema {
             if (true) {
                 buzon_mensaje.ConstruyePorcion (inicio_protocolo, bytes_protocolo, buzon_protocolo);
             }
-            //
             PreparaGrupos (buzon_mensaje, bytes_datos);
         }
 
@@ -467,7 +464,7 @@ namespace com.mazc.Sistema {
             buzon_indice  .PonInt  (0, seguridad.contador_CTR_local.NumeroMensaje);
             buzon_longitud.PonInt  (0, bytes_mensaje);
             //
-            base.AutenticaCifra (buzon_sensible, buzon_autentica, buzon_cifrado);
+            base.AutenticaCifra ();
             //
             conexion.EnviaSocket (conexion.BuzonMensaje, bytes_mensaje);
             //
@@ -476,9 +473,6 @@ namespace com.mazc.Sistema {
 
 
         internal void Recibe () {
-            int bytes_cabecera = bytes_billete +
-                                 bytes_indice +
-                                 bytes_longitud;
             conexion.RecibeSocket (conexion.BuzonMensaje, 0, bytes_cabecera);
             //
             // se valida el mensaje
@@ -490,7 +484,7 @@ namespace com.mazc.Sistema {
             //
             // validar resto:
             int bytes_resto   = buzon_longitud.TomaInt (0) - bytes_cabecera;
-            int bytes_paquete = bytes_resto - CalculoHMAC.BytesValor;
+            int bytes_paquete = bytes_resto - bytes_autentica;
             //
             PreparaBuzones (bytes_paquete);
             //
@@ -498,7 +492,7 @@ namespace com.mazc.Sistema {
             //
             //seguridad.ImprimeRecibe (buzon_billete, buzon_indice, buzon_longitud, "AES ( t | a )");
             //
-            base.DescifraVerifica (buzon_sensible, buzon_autentica, buzon_cifrado);       
+            base.DescifraVerifica ();       
         }
 
 
