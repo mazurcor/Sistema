@@ -62,7 +62,7 @@ namespace com.mazc.Sistema {
 
 
     // Clase que prepara el primer mensajes de establecimiento de secreto. Encriptado con RSA.
-    internal sealed class PrimerMensajeClaves : MensajeBase {
+    internal sealed class MensajeClaves : MensajeBase {
 
 
         #region variables privadas
@@ -104,7 +104,7 @@ namespace com.mazc.Sistema {
         #endregion
 
 
-        internal PrimerMensajeClaves (Seguridad seguridad_) : 
+        internal MensajeClaves (Seguridad seguridad_) : 
                 base (seguridad_) {
             Depuracion.Asevera (! seguridad_.DeServidor);
             //
@@ -136,11 +136,12 @@ namespace com.mazc.Sistema {
 
         // envia el mensaje (desde el servicio)
         internal void Envia (Buzon secreto_) {
-            Buzon.CopiaDatos (secreto_, this.buzon_secreto);
-            Buzon.CopiaDatos (Seguridad.protocolo, this.buzon_protocolo);
             buzon_billete .PonInt (0, 0);
             buzon_indice  .PonInt (0, 0);
             buzon_longitud.PonInt (0, buzon_mensaje.Longitud);
+            //
+            Buzon.CopiaDatos (secreto_, this.buzon_secreto);
+            Buzon.CopiaDatos (Seguridad.protocolo, this.buzon_protocolo);
             //
             CifradoRSA cifrado_RSA = new CifradoRSA ();
             try {
@@ -152,7 +153,9 @@ namespace com.mazc.Sistema {
             //
             conexion.EnviaSocket (buzon_mensaje, buzon_mensaje.Longitud);
             //
-//            seguridad.ImprimeEnvia (billete, indice, longitud, "RSA ( S1 | protocolo )");
+            seguridad.ImprimeEnvia (
+                    buzon_billete, buzon_indice, buzon_longitud, 
+                    "RSA ( S1 | protocolo )"                    );
         }
 
 
@@ -160,7 +163,9 @@ namespace com.mazc.Sistema {
         internal void Recibe (out Buzon secreto_) {
             conexion.RecibeSocket (buzon_mensaje, 0, buzon_mensaje.Longitud);
             //
-//            seguridad.ImprimeRecibe (billete, indice, longitud, "RSA ( S1 | protocolo )");
+            seguridad.ImprimeRecibe (
+                    buzon_billete, buzon_indice, buzon_longitud, 
+                    "RSA ( S1 | protocolo )"                    );
             //
             // se valida el mensaje
             if (buzon_billete .TomaInt (0) != 0 ||
@@ -195,7 +200,7 @@ namespace com.mazc.Sistema {
         #region variables protegidas
 
         //  Mensaje a enviar.
-        //      buzón:
+        //      buzón 'mensaje':
         //          +---+---+---+-----------+---+
         //          | b | i | l |     d     | a |
         //          +---+---+---+-----------+---+
@@ -213,6 +218,15 @@ namespace com.mazc.Sistema {
         //          l: longitud
         //          d: datos
         //          a: autentica
+        //  Auxiliares.
+        //      buzon 'verifica':
+        //          +---+
+        //          |   |
+        //          +---+
+        //      buzon 'contador':
+        //          +---+
+        //          |   |
+        //          +---+
 
         protected const int bytes_autentica = CalculoHMAC.BytesValor;
         protected       int bytes_sensible;
@@ -222,6 +236,9 @@ namespace com.mazc.Sistema {
         protected Buzon buzon_sensible;
         protected Buzon buzon_cifrado;
 
+        private Buzon buzon_verifica;
+        private Buzon buzon_contador;
+
         #endregion
 
 
@@ -230,6 +247,16 @@ namespace com.mazc.Sistema {
             buzon_autentica = new Buzon ();
             buzon_sensible  = new Buzon ();
             buzon_cifrado   = new Buzon ();
+            buzon_verifica  = new Buzon ();
+            buzon_contador  = new Buzon ();
+            //
+            PreparaPrivados ();
+        }
+
+
+        private void PreparaPrivados () {
+            buzon_verifica.Reserva (bytes_autentica);
+            buzon_contador.Reserva (ContadorCTR.BytesContador);
         }
 
 
@@ -246,11 +273,51 @@ namespace com.mazc.Sistema {
             buzon_mensaje.ConstruyePorcion (inicio_autentica, bytes_autentica, buzon_autentica);
         }
 
-        internal void AutenticaCifra () {
+
+        internal void AutenticaCifra (Buzon buzon_mensaje, Buzon buzon_clave, Buzon buzon_numero, Buzon buzon_protocolo) {
+            seguridad.calculo_HMAC_local.Calcula (buzon_sensible, buzon_autentica);
+            Cifra_AES (seguridad.cifrado_AES_local, seguridad.contador_CTR_local);
         }
 
 
-        internal void DescifraVerifica () {
+        internal void DescifraVerifica (Buzon buzon_mensaje, Buzon buzon_clave, Buzon buzon_numero, Buzon buzon_protocolo) {
+            Cifra_AES (seguridad.cifrado_AES_remoto, seguridad.contador_CTR_remoto);
+            // AQUI: comprobar la autenticacion
+            seguridad.calculo_HMAC_remoto.Calcula (buzon_sensible, buzon_verifica);
+            if (Buzon.DatosIguales (buzon_verifica, buzon_autentica)) {
+                // AQUI: ¿que hacer????
+                return;
+            }
+        }
+
+
+        private void Cifra_AES (CifradoAES cifra_AES, ContadorCTR cuenta_CTR) {
+            int posicion = 0;
+            int longitud = buzon_cifrado.Longitud;
+            ////
+            while (true) {
+                cuenta_CTR.AsignaContador (buzon_contador);
+                cifra_AES.Cifra (buzon_contador);
+                //
+                int resto;
+                if (CifradoAES.BytesBloque <= longitud) {
+                    resto = CifradoAES.BytesBloque;
+                } else {
+                    resto = longitud;
+                }
+                //
+                for (int i = 0; i < resto; ++ i) {
+                    buzon_cifrado [posicion] ^= buzon_contador [i];
+                    posicion ++;
+                    longitud --;
+                }
+                //
+                if (longitud <= 0) {
+                    return;
+                }
+                //
+                cuenta_CTR.IncrementaBloque ();
+            }
         }
 
 
@@ -353,13 +420,46 @@ namespace com.mazc.Sistema {
         }
 
 
-        internal long Recibe () {
-            throw new NotImplementedException ();
+        internal void Envia (long billete) {
+            buzon_billete .PonLong (0, seguridad.contador_CTR_local.NumeroSerie);
+            buzon_indice  .PonInt  (0, seguridad.contador_CTR_local.NumeroMensaje);
+            buzon_longitud.PonInt  (0, buzon_mensaje.Longitud);
+            //
+            this.buzon_numero.PonLong (0, billete);
+            Buzon.CopiaDatos (Seguridad.protocolo, buzon_protocolo);
+            //
+            AutenticaCifra (this.buzon_mensaje, this.buzon_clave, this.buzon_numero, this.buzon_protocolo);
+            //
+            conexion.EnviaSocket (buzon_mensaje, buzon_mensaje.Longitud);
+            //
+            seguridad.ImprimeEnvia (
+                    buzon_billete, buzon_indice, buzon_longitud, 
+                    "AES ( b1 | 'com.mazc 0.2' | a )");
         }
 
 
-        internal void Envia (long billete) {
-            throw new NotImplementedException ();
+        internal long Recibe () {
+            conexion.RecibeSocket (buzon_mensaje, 0, buzon_mensaje.Longitud);
+            //
+            seguridad.ImprimeRecibe (
+                    buzon_billete, buzon_indice, buzon_longitud, 
+                    "AES ( b1 | 'com.mazc 0.2' | a )");
+            //
+            // se valida el mensaje
+            if (buzon_billete .TomaLong (0) != 0 ||
+                buzon_indice  .TomaInt  (0) != 0 ||
+                buzon_longitud.TomaInt  (0) != buzon_mensaje.Longitud) {
+                // ????
+                return 0;
+            }
+            //
+            DescifraVerifica (this.buzon_mensaje, this.buzon_clave, this.buzon_numero, this.buzon_protocolo);
+            //
+            if (! Buzon.DatosIguales (buzon_protocolo, Seguridad.protocolo)) {
+                // ????
+                return 0;
+            }
+            return buzon_numero.TomaLong (0);
         }
 
 
@@ -464,11 +564,13 @@ namespace com.mazc.Sistema {
             buzon_indice  .PonInt  (0, seguridad.contador_CTR_local.NumeroMensaje);
             buzon_longitud.PonInt  (0, bytes_mensaje);
             //
-            base.AutenticaCifra ();
+            base.AutenticaCifra (null, null, null, null);
             //
             conexion.EnviaSocket (conexion.BuzonMensaje, bytes_mensaje);
             //
-            //seguridad.ImprimeEnvia (this.billete, this.indice, this.longitud, "AES ( t | a )");
+            seguridad.ImprimeEnvia (
+                    buzon_billete, buzon_indice, buzon_longitud, 
+                    "AES ( t | a )");
        }
 
 
@@ -490,9 +592,11 @@ namespace com.mazc.Sistema {
             //
             conexion.RecibeSocket (conexion.BuzonMensaje, bytes_cabecera, bytes_resto);
             //
-            //seguridad.ImprimeRecibe (buzon_billete, buzon_indice, buzon_longitud, "AES ( t | a )");
+            seguridad.ImprimeRecibe (
+                    buzon_billete, buzon_indice, buzon_longitud, 
+                    "AES ( t | a )");
             //
-            base.DescifraVerifica ();       
+            base.DescifraVerifica (null, null, null, null);    
         }
 
 
@@ -540,13 +644,13 @@ namespace com.mazc.Sistema {
         // encripta usando AES y una de las claves de encriptación; 
         // el encriptador local de este programa se empareja con el encriptador remoto del programa 
         // remoto y viceversa
-        private CifradoAES  cifrado_AES_local;
-        private CifradoAES  cifrado_AES_remoto;
+        internal CifradoAES  cifrado_AES_local;
+        internal CifradoAES  cifrado_AES_remoto;
         // autentica usando HMAC y una de las claves de autenticación; 
         // el autenticador local de este programa se empareja con el autenticador remoto del programa 
         // remoto y viceversa
-        private CalculoHMAC calculo_HMAC_local;
-        private CalculoHMAC calculo_HMAC_remoto;
+        internal CalculoHMAC calculo_HMAC_local;
+        internal CalculoHMAC calculo_HMAC_remoto;
 
         // se crea un preparador para los mensajes de datos y siempre está disponible;
         // los otros preparadores de mensaje se crean cuando se necesitan y luego se eliminan
@@ -693,7 +797,7 @@ namespace com.mazc.Sistema {
         private void EnviaRecibePrimeros () {
             Depuracion.Depura (! de_cliente, "'billete' o 'indice' fuera de lugar");
             //
-            PrimerMensajeClaves mensaje_claves = new PrimerMensajeClaves (this);
+            MensajeClaves mensaje_claves = new MensajeClaves (this);
             Buzon secreto = GeneraSecreto ();
             mensaje_claves.Envia (secreto);
             EstableceCripto (secreto);
@@ -709,7 +813,7 @@ namespace com.mazc.Sistema {
         private void RecibeEnviaPrimeros () {
             Depuracion.Depura (! de_servicio, "'billete' o 'indice' fuera de lugar");
             //
-            PrimerMensajeClaves mensaje_claves = new PrimerMensajeClaves (this);
+            MensajeClaves mensaje_claves = new MensajeClaves (this);
             Buzon secreto;
             mensaje_claves.Recibe (out secreto);
             EstableceCripto (secreto);
@@ -818,6 +922,50 @@ namespace com.mazc.Sistema {
                         calculo_HMAC_local.Inicia (clave);
                     }
                 }
+            }
+        }
+
+
+        internal void ImprimeEnvia ( 
+                Buzon billete, 
+                Buzon indice,
+                Buzon longitud,
+                string texto,
+                params Buzon [] buzones) {
+            return;
+            if (de_cliente) {
+                Console.Write ("          <-----    ");
+            }
+            Console.Write ("{0:x} | {1:d} | {2:d} | {3:s}", 
+                    billete.TomaLong (0), indice.TomaInt (0), longitud.TomaInt (0), texto);
+            if (de_servicio) {
+                Console.Write ("    ----->");
+            }
+            Console.WriteLine ();
+            foreach (Buzon buzon in buzones) {
+                Console.WriteLine (buzon);
+            }
+        }
+
+
+        internal void ImprimeRecibe ( 
+                Buzon billete,
+                Buzon indice,
+                Buzon longitud,
+                string texto,
+                params Buzon [] buzones) {
+            return;
+            if (de_cliente) {
+                Console.Write ("          ----->    ");
+            }
+            Console.Write ("{0:x} | {1:d} | {2:d} | {3:s}", 
+                    billete.TomaLong (0), indice.TomaInt (0), longitud.TomaInt (0), texto);
+            if (de_servicio) {
+                Console.Write ("    <-----");
+            }
+            Console.WriteLine ();
+            foreach (Buzon buzon in buzones) {
+                Console.WriteLine (buzon);
             }
         }
 

@@ -131,7 +131,15 @@ namespace com.mazc.Sistema {
             Depuracion.Asevera (clave_SHA.Longitud > 0);
             #endif
             //
-            algoritmo = new HMACSHA256 (clave_SHA.Datos);
+            byte [] entrada;
+            if (clave_SHA.Inicio == 0 && clave_SHA.Datos.Length == clave_SHA.Longitud) {
+                entrada = clave_SHA.Datos;
+            } else {
+                entrada = new byte [clave_SHA.Longitud];
+                clave_SHA.TomaBinario (0, entrada);
+            }
+            //           
+            algoritmo = new HMACSHA256 (entrada);
             //
             #if DEBUG
             Depuracion.Asevera (algoritmo.CanReuseTransform );
@@ -175,7 +183,7 @@ namespace com.mazc.Sistema {
             }
             #endif
             //
-            byte [] retorno = algoritmo.ComputeHash (mensaje.Datos);
+            byte [] retorno = algoritmo.ComputeHash (mensaje.Datos, mensaje.Inicio, mensaje.Longitud);
             //
             #if DEBUG
             Depuracion.Asevera (retorno.Length == BytesValor);
@@ -556,7 +564,7 @@ namespace com.mazc.Sistema {
         private int  numero_bloque;
 
         // almacena el contador preparado
-        private byte [] buzon_contador;
+        //private byte [] buzon_contador;
 
         // distribución de campos en el contador
         private const int bytes_bloque   = 4;
@@ -577,7 +585,7 @@ namespace com.mazc.Sistema {
         /// </remarks>
         internal ContadorCTR () {
             serie_iniciada = false;
-            buzon_contador = new byte [BytesContador];
+            //buzon_contador = new byte [BytesContador];
         }
 
 
@@ -597,9 +605,9 @@ namespace com.mazc.Sistema {
             numero_mensaje = 0;
             numero_bloque  = 0;
             //
-            PonNumeroBuzon (numero_serie,   inicio_serie);
-            PonNumeroBuzon (numero_mensaje, inicio_mensaje);
-            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //PonNumeroBuzon (numero_serie,   inicio_serie);
+            //PonNumeroBuzon (numero_mensaje, inicio_mensaje);
+            //PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
             serie_iniciada = true;
             contador_leido = false;
@@ -620,7 +628,9 @@ namespace com.mazc.Sistema {
         /// <param name="serie">marca de la nueva serie, </param>
         internal void CambiaSerie (long serie) {
             Depuracion.Asevera (serie_iniciada);
-            Depuracion.Asevera (contador_leido);
+            if (numero_serie != 0 || numero_mensaje != 0 || numero_bloque != 0) {
+                Depuracion.Asevera (contador_leido);
+            }
             Depuracion.Asevera (numero_mensaje == 0);
             Depuracion.Asevera (serie != 0);
             Depuracion.Asevera (numero_serie != serie);
@@ -629,9 +639,9 @@ namespace com.mazc.Sistema {
             numero_mensaje = 1;
             numero_bloque  = 0;
             //
-            PonNumeroBuzon (numero_serie,   inicio_serie);
-            PonNumeroBuzon (numero_mensaje, inicio_mensaje);
-            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //PonNumeroBuzon (numero_serie,   inicio_serie);
+            //PonNumeroBuzon (numero_mensaje, inicio_mensaje);
+            //PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
             serie_iniciada = true;
             contador_leido = false;
@@ -656,8 +666,8 @@ namespace com.mazc.Sistema {
             numero_mensaje = 0;
             numero_bloque  = 0;
             //
-            PonNumeroBuzon (numero_mensaje, inicio_mensaje);
-            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //PonNumeroBuzon (numero_mensaje, inicio_mensaje);
+            //PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
             contador_leido = false;
         }
@@ -685,8 +695,8 @@ namespace com.mazc.Sistema {
             }
             numero_bloque = 0;
             //
-            PonNumeroBuzon (numero_mensaje, inicio_mensaje);
-            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //PonNumeroBuzon (numero_mensaje, inicio_mensaje);
+            //PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
             contador_leido = false;
         }
@@ -706,7 +716,7 @@ namespace com.mazc.Sistema {
             //
             numero_bloque ++;
             //
-            PonNumeroBuzon (numero_bloque,  inicio_bloque);
+            //PonNumeroBuzon (numero_bloque,  inicio_bloque);
             //
             contador_leido = false;
         }
@@ -758,7 +768,11 @@ namespace com.mazc.Sistema {
             Depuracion.Asevera (serie_iniciada);
             Depuracion.Asevera (! contador_leido);
             //
-            Buffer.BlockCopy (buzon_contador, 0, destino.Datos, destino.Inicio, BytesContador);
+            PonNumeroBuzon (numero_serie,   inicio_serie,   destino);
+            PonNumeroBuzon (numero_mensaje, inicio_mensaje, destino);
+            PonNumeroBuzon (numero_bloque,  inicio_bloque,  destino);
+            //Buffer.BlockCopy (buzon_contador, 0, destino.Datos, destino.Inicio, BytesContador);
+            //
             contador_leido = true;
         }
 
@@ -767,24 +781,24 @@ namespace com.mazc.Sistema {
 
 
         // Pone en el buzon del contador la marca de serie actual.
-        private void PonNumeroBuzon (long numero, int inicio) {
-            buzon_contador [inicio    ] = (byte) (numero_serie >> 56);
-            buzon_contador [inicio + 1] = (byte) (numero_serie >> 48);
-            buzon_contador [inicio + 2] = (byte) (numero_serie >> 40);
-            buzon_contador [inicio + 3] = (byte) (numero_serie >> 32);
-            buzon_contador [inicio + 4] = (byte) (numero_serie >> 24);
-            buzon_contador [inicio + 5] = (byte) (numero_serie >> 16);
-            buzon_contador [inicio + 6] = (byte) (numero_serie >>  8);
-            buzon_contador [inicio + 7] = (byte) (numero_serie      );
+        private void PonNumeroBuzon (long numero, int inicio, Buzon destino) {
+            destino [inicio    ] = (byte) (numero_serie >> 56);
+            destino [inicio + 1] = (byte) (numero_serie >> 48);
+            destino [inicio + 2] = (byte) (numero_serie >> 40);
+            destino [inicio + 3] = (byte) (numero_serie >> 32);
+            destino [inicio + 4] = (byte) (numero_serie >> 24);
+            destino [inicio + 5] = (byte) (numero_serie >> 16);
+            destino [inicio + 6] = (byte) (numero_serie >>  8);
+            destino [inicio + 7] = (byte) (numero_serie      );
         }
 
 
         // Pone en el buzón del contador el número indicado en la posición indicada.
-        private void PonNumeroBuzon (int numero, int inicio) {
-            buzon_contador [inicio    ] = (byte) (numero >> 24);
-            buzon_contador [inicio + 1] = (byte) (numero >> 16);
-            buzon_contador [inicio + 2] = (byte) (numero >>  8);
-            buzon_contador [inicio + 3] = (byte) (numero      );
+        private void PonNumeroBuzon (int numero, int inicio, Buzon destino) {
+            destino [inicio    ] = (byte) (numero >> 24);
+            destino [inicio + 1] = (byte) (numero >> 16);
+            destino [inicio + 2] = (byte) (numero >>  8);
+            destino [inicio + 3] = (byte) (numero      );
         }
 
 
@@ -792,10 +806,6 @@ namespace com.mazc.Sistema {
 
 
         #region métodos privados
-
-
-        // para que funcione esta prueba hay que poner:
-        //      internal const int MaximoMensaje = 5;//int.MaxValue;
 
 
         /*
@@ -844,6 +854,9 @@ namespace com.mazc.Sistema {
         */
 
 
+        // ATENCIÓN: 
+        //      para que funcione esta prueba hay que poner:
+        //      internal const int MaximoMensaje = 5;//int.MaxValue;
         private static void Valida () {
             ContadorCTR CTR = new ContadorCTR (); 
             ValidaIniciaSerie       (CTR);
@@ -1146,18 +1159,27 @@ namespace com.mazc.Sistema {
             Depuracion.Asevera (mensaje != null);
             #endif
             //
-            byte [] datos = algoritmo.Decrypt (cifrado.Datos, RSAEncryptionPadding.OaepSHA512);
+            byte [] entrada;
+            if (cifrado.Inicio == 0 && cifrado.Datos.Length == cifrado.Longitud) {
+                entrada = cifrado.Datos;
+            } else {
+                entrada = new byte [cifrado.Longitud];
+                cifrado.TomaBinario (0, entrada);
+            }
+            //
+            byte [] salida = algoritmo.Decrypt (entrada, RSAEncryptionPadding.OaepSHA512);
             //
             #if DEBUG
             if (mensaje.Longitud > 0) {
-                Depuracion.Asevera (datos.Length <= mensaje.Longitud);
+                Depuracion.Asevera (salida.Length <= mensaje.Longitud);
             }
             #endif
             //
             if (mensaje.Longitud == 0) {
-                mensaje.Construye (datos);
+                mensaje.Construye (salida);
             } else {
-                Buffer.BlockCopy (datos, 0, mensaje.Datos, mensaje.Inicio, datos.Length);
+                mensaje.PonBinario (0, salida);
+                //Buffer.BlockCopy (salida, 0, mensaje.Datos, mensaje.Inicio, salida.Length);
             }
         }
 

@@ -1180,7 +1180,7 @@ namespace com.mazc.Sistema {
                 int recibidos;
                 try {
                     recibidos = socket.Receive (
-                        buzon_paquete.Datos, posicion, longitud, SocketFlags.None);
+                        buzon.Datos, posicion, longitud, SocketFlags.None);
                 } catch (SocketException excepcion) {
                     erronea = true;
                     throw new ErrorConexion (excepcion.Message);

@@ -9,12 +9,6 @@ namespace CreaClavesRSA {
 
 
         static void Main (string [] args) {
-            //#if DEBUG  
-            //Console.WriteLine("DEBUG is defined");  
-            //#else  
-            //Console.WriteLine("DEBUG is not defined");  
-            //#endif  
-            //
             byte [] clave_publica;
             byte [] clave_privada;
             CifradoRSA.GeneraParClaves (out clave_publica, out clave_privada);
