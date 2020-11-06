@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 //using System.Runtime.CompilerServices;
 
@@ -22,15 +23,6 @@ namespace com.mazc.Sistema {
         }
 
 
-        //internal static void Valida (bool condicion) {
-        //    if (condicion) {
-        //        throw new Exception ("Fallo de validación");
-        //    }
-        //    // AQUI:
-        //}
-
-
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void Asevera (bool condicion) {
             if (! condicion) {
                 throw new Exception ();

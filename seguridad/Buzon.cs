@@ -1,5 +1,5 @@
 ﻿//------------------------------------------------------------------------------
-// archivo:     Sistema/Buzon.cs
+// archivo:     Sistema/seguridad/Buzon.cs
 // versión:     27-Oct-2020, terminado y comentado.
 // autor:       M. A. Zurita Cortés (mazurcor@gmail.com)
 // licencia:    Licencia Pública General de GNU, versión 3
