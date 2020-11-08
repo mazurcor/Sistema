@@ -361,7 +361,7 @@ namespace com.mazc.Sistema {
         internal void ImprimeEnvia ( 
                 Buzon billete, Buzon indice, Buzon longitud,
                 string texto, params Buzon [] buzones) {
-            //return;
+            return;
             if (de_cliente) {
                 Console.Write ("          <-----    ");
             }
@@ -380,7 +380,7 @@ namespace com.mazc.Sistema {
         internal void ImprimeRecibe ( 
                 Buzon billete, Buzon indice, Buzon longitud, 
                 string texto, params Buzon [] buzones) {
-            //return;
+            return;
             if (de_cliente) {
                 Console.Write ("          ----->    ");
             }

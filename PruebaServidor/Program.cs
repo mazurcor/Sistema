@@ -160,9 +160,6 @@ namespace PruebaServidor {
                 cadena = conexion.ExtraeString ();
                 Console.Write (cadena + "\n");
 
-    //            conexion.EnviaInteger (33);
-
-
                 string s;
         
                 s = conexion.RecibeString ();
@@ -184,12 +181,14 @@ namespace PruebaServidor {
                 conexion.EnviaString (s);
 
             } catch (ConexionInterrumpida) {
-    		    Console.Write ("Conexión interrumpida. ");
-                Console.Write ("\n");
+    		    Console.WriteLine ("Conexión interrumpida. ");
             } catch (ErrorConexion error) {
-    		    Console.Write ("ErrorConexion: ");
-	    	    Console.Write (error.Message);
-                Console.Write ("\n");
+    		    Console.WriteLine ("ErrorConexion: ");
+	    	    Console.WriteLine (error.Message);
+            } catch (Exception error) {
+    		    Console.WriteLine ("Excepción: ");
+	    	    Console.WriteLine (error.Message);
+                Console.WriteLine (error.StackTrace);
             } finally { 
                 conexion.Termina ();
                 servidor.Termina ();

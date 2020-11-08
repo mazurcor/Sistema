@@ -69,7 +69,7 @@ namespace com.mazc.Sistema {
         private const int inicio_serie   = 0;
         private const int inicio_mensaje = inicio_serie   + bytes_serie;
         private const int inicio_bloque  = inicio_mensaje + bytes_mensaje;
- 
+
         #endregion
 
 
@@ -155,6 +155,7 @@ namespace com.mazc.Sistema {
         /// </remarks>
         internal void AnulaMensaje () {
             Depuracion.Asevera (serie_iniciada);
+            // se anula el mensaje tras cambiar la serie, cuando el contador no está leido:
             //Depuracion.Asevera (contador_leido);
             Depuracion.Asevera (numero_serie != 0);
             Depuracion.Asevera (numero_mensaje > 0);

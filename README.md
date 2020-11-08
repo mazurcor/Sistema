@@ -1,4 +1,7 @@
 # Sistema
 Desarrollo de un canal seguro de comunicación en .Net.
 
-A 22-Oct-2020 estamos en pleno desarrollo.
+8-Nov-2020: Primera iterción de desarrollo completa. Ya funciona. 
+
+Pronto vendrán nuevas iteraciones.
+

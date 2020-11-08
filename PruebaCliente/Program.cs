@@ -73,9 +73,12 @@ namespace PruebaCliente {
                 s = conexion.RecibeString ();
                 Console.Write ("3) " + s + "\n");
             } catch (ErrorConexion error) {
-    		    Console.Write ("ErrorConexion: ");
-	    	    Console.Write (error.Message);
-                Console.Write ("\n");
+    		    Console.WriteLine ("ErrorConexion: ");
+	    	    Console.WriteLine (error.Message);
+            } catch (Exception error) {
+    		    Console.WriteLine ("Excepción: ");
+	    	    Console.WriteLine (error.Message);
+                Console.WriteLine (error.StackTrace);
             } finally { 
                 conexion.Termina ();
             }

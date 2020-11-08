@@ -25,7 +25,7 @@ namespace com.mazc.Sistema {
 
         internal static void Asevera (bool condicion) {
             if (! condicion) {
-                throw new Exception ();
+                throw new Exception ("Aseveración inclumpida.");
             }
             // AQUI:
         }
